@@ -13,7 +13,9 @@
 [![Stockfish](https://img.shields.io/badge/Engine-Stockfish%2016-teal)](https://stockfishchess.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-**ChessWise** is an end-to-end chess training platform combining calibrated machine learning with engine analysis to identify, explain, and exploit blunder risks in human play. 
+**ChessWise** is an end-to-end chess training platform combining calibrated machine learning with engine analysis to identify, explain, and exploit blunder risks in human play.
+
+📑 **Consolidated Project Report:** [`docs/CHESSWISE_PROJECT_REPORT.docx`](./docs/CHESSWISE_PROJECT_REPORT.docx)
 
 </div>
 
@@ -46,7 +48,8 @@
 
 | Domain | Technologies |
 | :--- | :--- |
-| **Backend & ML** | Python 3.11+, FastAPI, Uvicorn, `python-chess`, `scikit-learn`, `joblib`, `NumPy`, `Pydantic` |
+| **Backend** | Python 3.11+, FastAPI, Uvicorn, `python-chess`, `Pydantic` |
+| **Machine Learning** | `scikit-learn`, `joblib`, `NumPy`, Probability Calibration, PR-AUC / ROC-AUC Analysis |
 | **Chess Engines** | Stockfish 16+ (UCI protocol), Maia-2 (PyTorch human-aligned model) |
 | **Frontend** | React 18, TypeScript, Vite, `react-chessboard`, `chess.js`, Lucide React |
 | **DevOps & Tooling**| Docker, Docker Compose, Pytest, Pytest-Cov |
@@ -57,24 +60,8 @@
 
 ```text
 Chess project/
-├── .github/                     # CI/CD workflows and repository metadata
-├── data/                        # Datasets (ignored in Git; tracked via .gitkeep)
-│   ├── raw/                     # Downloaded Lichess PGN archives
-│   └── processed/               # Extracted tabular feature sets
-├── frontend/                    # Interactive web dashboard (React + Vite + TypeScript)
-│   ├── public/                  # Static assets and sounds
-│   ├── src/                     # React components, chess hooks, board logic
-│   ├── package.json             # Frontend dependencies
-│   ├── tsconfig.json            # TypeScript configuration
-│   └── vite.config.ts           # Vite build configuration
-├── models/                      # ML model artifacts (metadata tracked; large binaries ignored)
-│   ├── blunder_model.metrics.json # Evaluation benchmarks and threshold configuration
-│   └── .gitkeep
-├── maia2_models/                # Storage for optional Maia-2 weights
-├── scripts/                     # Utility scripts and report generators
-│   └── generate_report.py       # Metrics and validation report compiler
-├── src/                         # Core Python package
-│   └── chess_trainer/           # Application modules
+├── backend/                     # FastAPI backend & engine services
+│   └── chess_trainer/           # Core modules (API, features, engine, model)
 │       ├── analysis.py          # PGN game parsing and risk categorizations
 │       ├── api.py               # FastAPI application endpoints
 │       ├── cli.py               # CLI utilities (chess-train, chess-download)
@@ -85,8 +72,28 @@ Chess project/
 │       ├── ingest.py            # Lichess API downloader and deduplication
 │       ├── maia.py              # Maia-2 engine adapter
 │       └── model.py             # BlunderModel training and inference logic
-├── tests/                       # Automated test suite (Pytest)
-├── tools/                       # Local binaries (e.g. Stockfish executable)
+├── data/                        # Datasets (raw & processed PGNs and manifests)
+│   ├── raw/                     # Downloaded Lichess PGN archives
+│   └── processed/               # Extracted tabular feature sets
+├── docs/                        # Complete project documentation & reports
+│   ├── CHESSWISE_PROJECT_REPORT.docx # Consolidated official project handoff report
+│   ├── DEPLOYMENT.md            # Public & local network deployment guide
+│   └── WORK_UPDATE.md           # Engineering implementation log
+├── frontend/                    # Interactive web dashboard (React + Vite + TypeScript)
+│   ├── public/                  # Static assets & downloadable report
+│   ├── src/                     # React components, chess hooks, board logic
+│   ├── package.json             # Frontend dependencies
+│   ├── tsconfig.json            # TypeScript configuration
+│   └── vite.config.ts           # Vite build configuration
+├── ml/                          # Machine learning models & evaluation scripts
+│   ├── models/                  # Benchmark metrics & model configurations
+│   │   ├── blunder_model.metrics.json # Evaluation benchmarks and thresholds
+│   │   └── .gitkeep
+│   ├── scripts/                 # Report generator & training utilities
+│   │   └── generate_report.py   # Metrics and validation report compiler
+│   └── maia2_models/            # Optional Maia-2 weights cache
+├── tests/                       # Automated backend test suite (Pytest)
+├── tools/                       # Local binaries (Stockfish engine)
 ├── .env.example                 # Template environment variables
 ├── .gitignore                   # Multi-tier Git exclusion rules
 ├── docker-compose.yml           # Multi-container orchestration
@@ -115,7 +122,7 @@ Chess project/
 ### Step 1: Clone & Configure
 
 ```bash
-git clone https://github.com/<your-username>/chess-project.git
+git clone https://github.com/mailtojaswanthss-svg/chess-project.git
 cd chess-project
 
 # Create your local environment configuration
@@ -125,7 +132,7 @@ cp .env.example .env
 Edit `.env` to point `STOCKFISH_PATH` to your local Stockfish executable:
 ```env
 STOCKFISH_PATH=C:/path/to/stockfish/stockfish-windows-x86-64-avx2.exe
-MODEL_PATH=models/blunder_model.joblib
+MODEL_PATH=ml/models/blunder_model.joblib
 BLUNDER_LOSS_CENTIPAWNS=100
 FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
@@ -207,7 +214,7 @@ You can collect games from public Lichess players and train the model from scrat
 chess-download "username1 username2" --output data/raw/training_games.pgn --max-games 200
 
 # 2. Extract features and train the model:
-chess-train data/raw/training_games.pgn --output models/blunder_model.joblib --stockfish-path $env:STOCKFISH_PATH --depth 8
+chess-train data/raw/training_games.pgn --output ml/models/blunder_model.joblib --stockfish-path $env:STOCKFISH_PATH --depth 8
 ```
 
 The training pipeline outputs comprehensive evaluation diagnostics including:

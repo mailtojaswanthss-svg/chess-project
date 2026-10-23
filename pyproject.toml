@@ -27,8 +27,8 @@ chess-train = "chess_trainer.cli:main"
 chess-download = "chess_trainer.cli:download_main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["backend"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["backend"]
 testpaths = ["tests"]

@@ -26,7 +26,7 @@ Start-Process powershell.exe -ArgumentList @(
     "-NoExit",
     "-ExecutionPolicy", "Bypass",
     "-Command",
-    "`$env:FRONTEND_ORIGINS='$frontendOrigins'; Set-Location -LiteralPath '$project'; & '$pythonPath' -m uvicorn chess_trainer.api:app --host 0.0.0.0 --port 8000"
+    "`$env:FRONTEND_ORIGINS='$frontendOrigins'; `$env:PYTHONPATH='$project\backend'; Set-Location -LiteralPath '$project'; & '$pythonPath' -m uvicorn chess_trainer.api:app --host 0.0.0.0 --port 8000"
 )
 
 Start-Process powershell.exe -ArgumentList @(

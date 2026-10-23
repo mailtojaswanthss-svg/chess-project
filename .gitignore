@@ -61,20 +61,30 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+/package-lock.json
 
 # =============================================================================
 # Large Binary Models & Weights (> 100MB rejected by GitHub)
 # =============================================================================
+ml/models/*.joblib
+ml/models/*.pkl
+ml/models/*.pt
+ml/models/*.bin
+ml/models/*.onnx
+!ml/models/.gitkeep
+!ml/models/*.metrics.json
+
 models/*.joblib
 models/*.pkl
 models/*.pt
 models/*.bin
 models/*.onnx
-# Preserve folder and metric metadata
 !models/.gitkeep
 !models/*.metrics.json
 
 # Maia-2 model cache and partial downloads
+ml/maia2_models/*
+!ml/maia2_models/.gitkeep
 maia2_models/*
 !maia2_models/.gitkeep
 *.part
@@ -129,6 +139,3 @@ data/processed/*
 ehthumbs.db
 Thumbs.db
 desktop.ini
-
-/package-lock.json
-

@@ -6,8 +6,8 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY pyproject.toml README.md ./
-COPY src ./src
-COPY models ./models
+COPY backend ./backend
+COPY ml/models ./ml/models
 RUN pip install --no-cache-dir .
 
 ENV STOCKFISH_PATH=/usr/games/stockfish

@@ -1,0 +1,134 @@
+# =============================================================================
+# Python & Virtual Environments
+# =============================================================================
+.venv/
+.maia-venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions / packaging / build artifacts
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# =============================================================================
+# Testing & Code Coverage
+# =============================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+.hypothesis/
+.tox/
+
+# =============================================================================
+# Node.js & Frontend
+# =============================================================================
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# =============================================================================
+# Large Binary Models & Weights (> 100MB rejected by GitHub)
+# =============================================================================
+models/*.joblib
+models/*.pkl
+models/*.pt
+models/*.bin
+models/*.onnx
+# Preserve folder and metric metadata
+!models/.gitkeep
+!models/*.metrics.json
+
+# Maia-2 model cache and partial downloads
+maia2_models/*
+!maia2_models/.gitkeep
+*.part
+
+# External engines & tools (e.g. Stockfish executable ~100MB)
+tools/*
+!tools/.gitkeep
+*.exe
+
+# =============================================================================
+# Raw & Processed Datasets (keep directories via .gitkeep)
+# =============================================================================
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# =============================================================================
+# Environment, Secrets & Local Config
+# =============================================================================
+.env
+*.env
+.env.*.local
+!.env.example
+
+# =============================================================================
+# Logs & Process Outputs
+# =============================================================================
+*.log
+*-tunnel*.log
+
+# =============================================================================
+# IDEs & Text Editors
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.cursor/
+
+# =============================================================================
+# Operating System Files
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+/package-lock.json
+

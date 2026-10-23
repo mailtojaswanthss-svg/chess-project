@@ -1,0 +1,8 @@
+# Core application dependencies for ChessWise / Chess Blunder Trainer
+fastapi>=0.115,<1
+joblib>=1.4,<2
+numpy>=2,<3
+pydantic-settings>=2.6,<3
+python-chess>=1.999,<2
+scikit-learn>=1.5,<2
+uvicorn[standard]>=0.32,<1

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chess-blunder-trainer"
+version = "0.1.0"
+description = "A Stage 1 chess blunder-risk prediction service."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "joblib>=1.4,<2",
+  "numpy>=2,<3",
+  "pydantic-settings>=2.6,<3",
+  "python-chess>=1.999,<2",
+  "scikit-learn>=1.5,<2",
+  "uvicorn[standard]>=0.32,<1",
+]
+
+[project.optional-dependencies]
+dev = ["httpx>=0.27,<1", "pytest>=8,<9", "pytest-cov>=6,<7"]
+maia = ["maia2>=0.11,<1"]
+
+[project.scripts]
+chess-train = "chess_trainer.cli:main"
+chess-download = "chess_trainer.cli:download_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

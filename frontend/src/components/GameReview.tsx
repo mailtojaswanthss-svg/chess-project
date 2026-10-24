@@ -52,8 +52,9 @@ export const GameReview: React.FC<GameReviewProps> = ({
   onDownloadPracticePositions,
 }) => {
   const moves = gameReport?.moves ?? [];
-  const selectedMove = moves.find((m) => m.ply === selectedPly) ?? (moves.length ? moves[0] : null);
-  const selectedIndex = selectedMove ? moves.indexOf(selectedMove) : -1;
+  const selectedMove =
+    selectedPly === 0 ? null : (moves.find((m) => m.ply === selectedPly) ?? (moves.length ? moves[0] : null));
+  const selectedIndex = selectedMove ? moves.indexOf(selectedMove) : (selectedPly === 0 ? -1 : (moves.length ? 0 : -1));
 
   // Breakdown by side (White vs Black)
   const whiteMoves = moves.filter((m) => m.player === "White");
@@ -96,8 +97,18 @@ export const GameReview: React.FC<GameReviewProps> = ({
 
   function step(delta: number) {
     if (!moves.length) return;
-    const nextIdx = Math.max(0, Math.min(moves.length - 1, selectedIndex + delta));
-    const targetMove = moves[nextIdx];
+    if (selectedIndex === -1 && delta > 0) {
+      onSelectPly(moves[0].ply);
+      return;
+    }
+    const nextIdx = selectedIndex + delta;
+    if (nextIdx < 0) {
+      onSelectPly(0);
+      playSound("click");
+      return;
+    }
+    const clampedIdx = Math.min(moves.length - 1, nextIdx);
+    const targetMove = moves[clampedIdx];
     const cls = targetMove.classification ?? classifyMove(targetMove.evaluation_loss_centipawns, targetMove.ply);
     if (cls === "brilliant") playSound("brilliant");
     else playSound("click");
@@ -247,7 +258,7 @@ export const GameReview: React.FC<GameReviewProps> = ({
             </div>
             <div className="svg-chart-wrap">
               <svg viewBox={`0 0 ${Math.max(300, moves.length * 14)} 100`} className="eval-svg">
-                <line x1="0" y1="50" x2={moves.length * 14} y2="50" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
+                <line x1="0" y1="50" x2={Math.max(300, moves.length * 14)} y2="50" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
                 {moves.map((m, idx) => {
                   const x = idx * 14 + 7;
                   const loss = Math.min(50, m.evaluation_loss_centipawns / 10);
@@ -301,23 +312,25 @@ export const GameReview: React.FC<GameReviewProps> = ({
           <div className="review-step-toolbar">
             <button
               className="icon-action-btn"
-              onClick={() => onSelectPly(moves[0].ply)}
-              disabled={selectedIndex <= 0}
-              title="First move"
+              onClick={() => onSelectPly(0)}
+              disabled={selectedPly === 0}
+              title="Game start (before move 1)"
             >
               <ChevronsLeft size={16} />
             </button>
             <button
               className="secondary-btn"
               onClick={() => step(-1)}
-              disabled={selectedIndex <= 0}
+              disabled={selectedPly === 0}
               title="Previous move"
             >
               <ChevronLeft size={16} /> Prev
             </button>
 
             <span className="step-indicator">
-              Move {selectedMove ? `${selectedMove.move_number}${selectedMove.ply % 2 === 1 ? "." : "..."} ${selectedMove.san}` : "-"} ({selectedIndex + 1} of {moves.length})
+              {selectedPly === 0
+                ? `Start Position (0 of ${moves.length})`
+                : `Move ${selectedMove ? `${selectedMove.move_number}${selectedMove.ply % 2 === 1 ? "." : "..."} ${selectedMove.san}` : "-"} (${selectedIndex + 1} of ${moves.length})`}
             </span>
 
             <button

@@ -252,7 +252,7 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
                   className={`candidate-row ${cand.classification}`}
                   onMouseEnter={() => onHoverCandidateMove?.(cand.uci)}
                   onMouseLeave={() => onHoverCandidateMove?.(null)}
-                  title={`Hover to visualize ${cand.san} on board · Eval: ${evalSign}${evalPawns} · Blunder Risk: ${candRisk}%`}
+                  title={`Hover to visualize ${cand.san} on board · Eval: ${evalSign}${evalPawns} · Opponent Response Risk: ${candRisk}%`}
                 >
                   <div className="cand-rank-san">
                     <span className={`cand-badge ${cand.classification}`}>
@@ -268,9 +268,9 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
                       className={`cand-blunder-risk ${
                         candRisk >= 65 ? "high" : candRisk >= 35 ? "med" : "low"
                       }`}
-                      title="Predicted Blunder Risk if this move is chosen"
+                      title="Predicted Opponent Blunder Likelihood in the resulting position"
                     >
-                      Risk: {candRisk}%
+                      Opp. Risk: {candRisk}%
                     </span>
                   </div>
                 </div>

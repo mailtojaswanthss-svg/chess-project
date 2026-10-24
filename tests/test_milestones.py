@@ -137,3 +137,43 @@ def test_analysis_iconic_badges():
     cls_mistake, badge_mistake = _classify_move(board, e4_move, loss=140, ply=15, danger_prob=0.3)
     assert cls_mistake == "mistake"
     assert badge_mistake == "?"
+
+
+def test_analysis_piece_trade_is_not_brilliant():
+    # White Knight on c3 captures Black Queen on d5
+    # Board with Black Queen on d5 defended by c6 pawn, White Knight on c3 captures d5
+    board = chess.Board("r1b1kbnr/ppp2ppp/2p5/3q4/8/2N5/PPPPPPPP/R1BQKBNR w KQkq - 0 4")
+    capture_queen = chess.Move.from_uci("c3d5")
+    assert capture_queen in board.legal_moves
+    cls, badge = _classify_move(board, capture_queen, loss=0, ply=8, danger_prob=0.1)
+    # Gaining queen with a knight is an optimal capture, NOT a brilliant sacrifice!
+    assert cls == "best"
+    assert badge == "★"
+
+    # Queen trade: White Queen takes Black Queen on d8
+    trade_board = chess.Board("r1bqkbnr/pppp1ppp/2n5/4p3/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 1 3")
+    # Equal material queen swap
+    trade_board_queens = chess.Board("r1bQkbnr/ppp2ppp/2n5/4p3/8/5N2/PPP1PPPP/RNB1KB1R b KQkq - 0 4")
+    # Black King captures Queen on d8
+    k_takes = chess.Move.from_uci("e8d8")
+    assert k_takes in trade_board_queens.legal_moves
+    cls_k, badge_k = _classify_move(trade_board_queens, k_takes, loss=0, ply=8, danger_prob=0.1)
+    assert cls_k == "best"
+    assert badge_k == "★"
+
+
+def test_blunder_dna_clean_game_has_no_artificial_back_rank_flaw():
+    # Standard classical opening without any back-rank mate weakness
+    clean_pgn = "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. O-O Nf6 5. d3 d6 *"
+    report = compute_blunder_dna(pgn_texts=[clean_pgn])
+    # The back_rank dimension must not be artificially maxed at 95 on an opening!
+    assert report.dimensions.back_rank < 50
+    assert report.archetype.name != "The Tunnel-Vision Invader"
+
+
+def test_blunder_dna_detects_genuine_back_rank_vulnerability():
+    # Position where king has no escape square and enemy heavy piece attacks back rank
+    back_rank_fen = "3r2k1/5ppp/8/8/8/8/4QPPP/6K1 w - - 0 1"
+    report = compute_blunder_dna(fens=[back_rank_fen])
+    assert report.dimensions.back_rank >= 50
+

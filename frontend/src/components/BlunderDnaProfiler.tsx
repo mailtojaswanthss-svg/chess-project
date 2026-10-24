@@ -188,10 +188,10 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
     pawn_structure: 35,
   };
 
-  // Radar Chart Geometry (Center at 160, 160, Radius = 115)
-  const cx = 160;
-  const cy = 160;
-  const r = 115;
+  // Radar Chart Geometry (Center at 180, 165, Radius = 100)
+  const cx = 180;
+  const cy = 165;
+  const r = 100;
   const axes = [
     { key: "pins", label: "Pins & Skewers", value: dims.pins, angle: -90 },
     { key: "hanging_pieces", label: "Hanging Pieces", value: dims.hanging_pieces, angle: -30 },
@@ -292,7 +292,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
           </div>
 
           <div className="radar-svg-wrapper">
-            <svg viewBox="0 0 320 320" className="radar-svg">
+            <svg viewBox="0 0 360 330" className="radar-svg">
               {/* Concentric Guide Webs */}
               {[25, 50, 75, 100].map((level) => {
                 const pts = axes.map((a) => {
@@ -351,18 +351,24 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
 
               {/* Axis Labels */}
               {axes.map((a) => {
-                const labelDist = 138;
+                const labelDist = 124;
                 const rad = (a.angle * Math.PI) / 180;
                 const lx = cx + labelDist * Math.cos(rad);
                 const ly = cy + labelDist * Math.sin(rad);
                 const isSelected = selectedAxis === a.key;
+                const anchor =
+                  a.angle === -90 || a.angle === 90
+                    ? "middle"
+                    : Math.cos(rad) > 0.1
+                    ? "start"
+                    : "end";
                 return (
                   <text
                     key={a.key}
                     x={lx}
                     y={ly}
                     className={`radar-axis-label ${isSelected ? "active" : ""}`}
-                    textAnchor="middle"
+                    textAnchor={anchor}
                     dominantBaseline="central"
                     onClick={() => {
                       playSound("click");

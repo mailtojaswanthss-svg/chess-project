@@ -150,3 +150,29 @@ def test_trap_puzzle_not_found():
     response = client.get("/trap-puzzles/non_existent_trap_id_12345")
     assert response.status_code == 404
 
+
+def test_tactical_analysis_terminal_checkmate_evaluation():
+    client = TestClient(app)
+    # Scholar's mate final position where White checkmates Black: White won (+9999)
+    mate_fen = "r1bqkb1r/pppp1Qpp/2n5/4p3/2B1n3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4"
+    resp = client.post("/tactical-analysis", json={"fen": mate_fen, "rating": 1200})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["evaluation_centipawns"] == 9999
+    assert data["win_chances"]["white"] == 1.0
+
+
+def test_tactical_analysis_pin_threat_accuracy():
+    client = TestClient(app)
+    # Black knight on c6 pinned to king by White bishop on b5
+    pin_fen = "r1bqkbnr/ppp2ppp/2n5/1B1pp3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 4"
+    resp = client.post("/tactical-analysis", json={"fen": pin_fen, "rating": 1200})
+    assert resp.status_code == 200
+    data = resp.json()
+    threats = data["threats"]
+    pinned_threats = [t for t in threats if t["motif"] == "pinned"]
+    assert len(pinned_threats) > 0
+    # Should identify Bishop as the pinner piece
+    assert "Bishop" in pinned_threats[0]["description"]
+
+

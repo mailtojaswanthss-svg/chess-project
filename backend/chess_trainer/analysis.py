@@ -115,23 +115,30 @@ def _classify_move(
         # Check for brilliant sacrifice: moved piece into an attacked square where material is genuinely sacrificed
         moving_piece = board.piece_at(move.from_square)
         if moving_piece and moving_piece.piece_type in (chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT):
-            enemy_attackers = list(board.attackers(not board.turn, move.to_square))
-            friendly_defenders = list(board.attackers(board.turn, move.to_square))
-            is_sac = False
-            if enemy_attackers:
-                if not friendly_defenders:
-                    is_sac = True
-                else:
-                    enemy_pieces = [board.piece_at(sq) for sq in enemy_attackers]
-                    attacker_types = [p.piece_type for p in enemy_pieces if p]
-                    if chess.PAWN in attacker_types and moving_piece.piece_type != chess.PAWN:
+            captured_piece = board.piece_at(move.to_square)
+            piece_vals = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 100}
+            captured_val = piece_vals[captured_piece.piece_type] if captured_piece else 0
+            moving_val = piece_vals[moving_piece.piece_type]
+            net_sac = moving_val - captured_val
+
+            if net_sac > 0:
+                enemy_attackers = list(board.attackers(not board.turn, move.to_square))
+                friendly_defenders = list(board.attackers(board.turn, move.to_square))
+                is_sac = False
+                if enemy_attackers:
+                    if not friendly_defenders:
                         is_sac = True
-                    elif moving_piece.piece_type == chess.QUEEN and any(pt in (chess.KNIGHT, chess.BISHOP, chess.ROOK) for pt in attacker_types):
-                        is_sac = True
-                    elif moving_piece.piece_type == chess.ROOK and any(pt in (chess.KNIGHT, chess.BISHOP) for pt in attacker_types):
-                        is_sac = True
-            if is_sac:
-                return "brilliant", "!!"
+                    else:
+                        enemy_pieces = [board.piece_at(sq) for sq in enemy_attackers]
+                        attacker_types = [p.piece_type for p in enemy_pieces if p]
+                        if chess.PAWN in attacker_types and moving_piece.piece_type != chess.PAWN:
+                            is_sac = True
+                        elif moving_piece.piece_type == chess.QUEEN and any(pt in (chess.KNIGHT, chess.BISHOP, chess.ROOK) for pt in attacker_types):
+                            is_sac = True
+                        elif moving_piece.piece_type == chess.ROOK and any(pt in (chess.KNIGHT, chess.BISHOP) for pt in attacker_types):
+                            is_sac = True
+                if is_sac:
+                    return "brilliant", "!!"
         if danger_prob >= 0.55 and loss == 0:
             return "great", "!"
         return "best", "★"

@@ -623,10 +623,22 @@ export default function App() {
   // Jump to move in Review
   const handleSelectReviewPly = (ply: number) => {
     if (!gameReport) return;
+    if (ply === 0) {
+      setSelectedReviewPly(0);
+      const startFen = gameReport.moves[0]?.fen ?? STARTING_FEN;
+      setGame(new Chess(startFen));
+      playSound("move");
+      return;
+    }
     const moveItem = gameReport.moves.find((m) => m.ply === ply);
     if (!moveItem) return;
     setSelectedReviewPly(ply);
     const reviewBoard = new Chess(moveItem.fen);
+    try {
+      reviewBoard.move(moveItem.uci);
+    } catch {
+      // fallback
+    }
     setGame(reviewBoard);
     playSound("move");
   };

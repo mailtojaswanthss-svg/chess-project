@@ -165,12 +165,13 @@ def move(request: MoveRequest) -> MoveResponse:
             san = board.san(selected_move)
     except (OSError, EngineConfigurationError) as exc:
         raise HTTPException(status_code=503, detail=f"Could not calculate a move: {exc}") from exc
+    eval_white = score if board.turn == chess.WHITE else -score
     board.push(selected_move)
     return MoveResponse(
         fen=board.fen(),
         uci=selected_move.uci(),
         san=san,
-        evaluation_centipawns=score,
+        evaluation_centipawns=eval_white,
     )
 
 
@@ -208,13 +209,14 @@ def trap_move(request: TrapMoveRequest) -> TrapMoveResponse:
             next_board.push(chosen_move)
             probability = model.predict_probability(extract_features(next_board, request.rating))
             san = board.san(chosen_move)
+            eval_white = chosen_score if board.turn == chess.WHITE else -chosen_score
     except (OSError, ValueError, KeyError, EngineConfigurationError) as exc:
         raise HTTPException(status_code=503, detail=f"Could not calculate trap move: {exc}") from exc
     return TrapMoveResponse(
         fen=next_board.fen(),
         uci=chosen_move.uci(),
         san=san,
-        evaluation_centipawns=chosen_score,
+        evaluation_centipawns=eval_white,
         predicted_blunder_probability=probability,
         evaluation_loss_centipawns=best_score - chosen_score,
         candidate_count=len(candidates),
@@ -367,17 +369,12 @@ def _detect_tactical_threats(board: chess.Board) -> list[ThreatItem]:
         p_name = chess.piece_name(piece.piece_type).capitalize()
 
         if board.is_pinned(turn, sq):
-            king_sq = board.king(turn)
-            pinner_str = "enemy slider"
-            if king_sq is not None:
-                ray = chess.SquareSet.ray(king_sq, sq)
-                pinners = [
-                    board.piece_at(s)
-                    for s in ray
-                    if board.piece_at(s) and board.piece_at(s).color != turn and s != sq
-                ]
-                if pinners:
-                    pinner_str = chess.piece_name(pinners[0].piece_type).capitalize()
+            pinner_str = "enemy piece"
+            for s in board.pin(turn, sq):
+                p = board.piece_at(s)
+                if p and p.color != turn:
+                    pinner_str = chess.piece_name(p.piece_type).capitalize()
+                    break
             threats.append(
                 ThreatItem(
                     square=sq_name,
@@ -454,7 +451,7 @@ def tactical_analysis(request: TacticalAnalysisRequest) -> TacticalAnalysisRespo
             candidate_moves=[],
             coach_explanation=explanation,
             win_chances={"white": 0.5, "draw": 0.0, "black": 0.5} if not outcome or outcome.winner is None else {"white": 1.0, "draw": 0.0, "black": 0.0} if outcome.winner == chess.WHITE else {"white": 0.0, "draw": 0.0, "black": 1.0},
-            evaluation_centipawns=0,
+            evaluation_centipawns=0 if not outcome or outcome.winner is None else 9999 if outcome.winner == chess.WHITE else -9999,
         )
 
     overall_prob = 0.2
@@ -549,7 +546,7 @@ def tactical_analysis(request: TacticalAnalysisRequest) -> TacticalAnalysisRespo
         candidate_moves=candidate_moves,
         coach_explanation=coach_explanation,
         win_chances=win_chances,
-        evaluation_centipawns=eval_centipawns,
+        evaluation_centipawns=eval_centipawns if board.turn == chess.WHITE else -eval_centipawns,
     )
 
 

@@ -55,6 +55,15 @@ def _detect_position_weaknesses(board: chess.Board, ply: int) -> dict[str, int]:
             if board.is_pinned(turn, sq):
                 counts["pins"] += 1
 
+    PIECE_VALUES = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9,
+        chess.KING: 100,
+    }
+
     # 2. Hanging Pieces
     for sq in chess.SQUARES:
         piece = board.piece_at(sq)
@@ -63,8 +72,16 @@ def _detect_position_weaknesses(board: chess.Board, ply: int) -> dict[str, int]:
             defenders = list(board.attackers(turn, sq))
             if attackers and not defenders:
                 counts["hanging"] += 1
-            elif len(attackers) > len(defenders):
-                counts["hanging"] += 1
+            elif attackers:
+                lowest_att = min(
+                    PIECE_VALUES[board.piece_at(s).piece_type]
+                    for s in attackers
+                    if board.piece_at(s)
+                )
+                if lowest_att < PIECE_VALUES[piece.piece_type]:
+                    counts["hanging"] += 1
+                elif len(attackers) > len(defenders) and lowest_att <= PIECE_VALUES[piece.piece_type]:
+                    counts["hanging"] += 1
 
     # 3. Overloaded defenders: piece that defends 2+ different attacked pieces
     defender_load: dict[chess.Square, int] = {}
@@ -77,8 +94,8 @@ def _detect_position_weaknesses(board: chess.Board, ply: int) -> dict[str, int]:
                     defender_load[def_sq] = defender_load.get(def_sq, 0) + 1
     counts["overloaded"] = sum(1 for load in defender_load.values() if load >= 2)
 
-    # 4. Back-rank vulnerability
-    if king_sq is not None:
+    # 4. Back-rank vulnerability (only applicable after opening development when back rank can be infiltrated)
+    if king_sq is not None and ply > 12:
         rank = chess.square_rank(king_sq)
         is_back = (turn == chess.WHITE and rank == 0) or (turn == chess.BLACK and rank == 7)
         if is_back:
@@ -97,7 +114,18 @@ def _detect_position_weaknesses(board: chess.Board, ply: int) -> dict[str, int]:
                 for p in board.piece_map().values()
             )
             if escape_blocked and enemy_heavy:
-                counts["back_rank"] += 1
+                friendly_pawns = [
+                    s for s, p in board.piece_map().items()
+                    if p.piece_type == chess.PAWN and p.color == turn
+                ]
+                friendly_pawn_files = set(chess.square_file(s) for s in friendly_pawns)
+                has_open_corridor = any(f not in friendly_pawn_files for f in range(8))
+                back_rank_attacked = any(
+                    len(board.attackers(not turn, chess.square(f, rank))) > 0
+                    for f in range(8)
+                )
+                if has_open_corridor and back_rank_attacked:
+                    counts["back_rank"] += 1
 
     # 5. Pawn Structure: isolated or doubled pawns
     pawn_squares = [s for s, p in board.piece_map().items() if p.piece_type == chess.PAWN and p.color == turn]
@@ -291,10 +319,10 @@ def compute_blunder_dna(
 
     # Normalize counts to a 0-100 severity index
     factor = 100.0 / max(1, total_positions)
-    pins_idx = min(95, max(10, int(agg["pins"] * factor * 2.5)))
-    hanging_idx = min(95, max(10, int(agg["hanging"] * factor * 2.0)))
-    overloaded_idx = min(95, max(10, int(agg["overloaded"] * factor * 3.0)))
-    back_rank_idx = min(95, max(10, int(agg["back_rank"] * factor * 4.0)))
+    pins_idx = min(95, max(10, int(agg["pins"] * factor * 2.0)))
+    hanging_idx = min(95, max(10, int(agg["hanging"] * factor * 1.8)))
+    overloaded_idx = min(95, max(10, int(agg["overloaded"] * factor * 2.0)))
+    back_rank_idx = min(95, max(10, int(agg["back_rank"] * factor * 2.5)))
     time_scramble_idx = min(95, max(10, int(agg["time_scramble"] * factor * 1.5)))
     pawn_struct_idx = min(95, max(10, int(agg["pawn_structure"] * factor * 1.2)))
 
@@ -327,7 +355,7 @@ def compute_blunder_dna(
         dimensions=dims,
         archetype=archetype,
         resilience_score=resilience,
-        games_analyzed=max(1, games_count),
+        games_analyzed=max(1, games_count) if games_count > 0 else (len(fens) if fens else 1),
         blunders_detected=blunders_count,
         critical_advice=advice,
     )

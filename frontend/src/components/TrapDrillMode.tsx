@@ -273,7 +273,7 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
   const customArrows: [Square, Square, string?][] = [];
   const customSquareStyles: Record<string, React.CSSProperties> = {};
 
-  if (activeTrap && activeTrap.tempted_move_uci.length >= 4) {
+  if (activeTrap && activeTrap.tempted_move_uci.length >= 4 && refutationStep <= 0) {
     const from = activeTrap.tempted_move_uci.substring(0, 2) as Square;
     const to = activeTrap.tempted_move_uci.substring(2, 4) as Square;
 

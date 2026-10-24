@@ -1,0 +1,109 @@
+/* Shared keyframes. Every animation here is switched off under reduced motion. */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  60% { opacity: 1; transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 var(--pulse-color, color-mix(in srgb, var(--accent) 55%, transparent)); }
+  70% { box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+@keyframes glow-turn {
+  0%, 100% { box-shadow: 0 0 0 1px var(--accent-ring), 0 0 24px -6px color-mix(in srgb, var(--accent) 35%, transparent); }
+  50% { box-shadow: 0 0 0 1px var(--accent-ring), 0 0 36px -4px color-mix(in srgb, var(--accent) 55%, transparent); }
+}
+
+@keyframes check-flash {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 70%, transparent), 0 0 24px -4px color-mix(in srgb, var(--danger) 50%, transparent); }
+  50% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 95%, transparent), 0 0 40px 0 color-mix(in srgb, var(--danger) 60%, transparent); }
+}
+
+@keyframes sheen {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
+@keyframes draw-stroke {
+  from { stroke-dashoffset: var(--dash, 1200); }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* View entrance when switching tabs (the view is re-keyed on tab change).
+   Opacity only: a transform animation on an ancestor makes it the containing block
+   for position: fixed children, which offsets the board's drag ghost from the cursor. */
+.view-enter {
+  animation: fade-in var(--dur-med) var(--ease-out) backwards;
+}
+
+/* Entrance animations use fill-mode "backwards" so no transform lingers after they end */
+
+/* Staggered entrance: set style={{ "--i": index }} on each child */
+.stagger > * {
+  animation: rise-in 420ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+/* Loading placeholder */
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--fg-rgb) / 0.08) 0%,
+    rgb(var(--fg-rgb) / 0.2) 50%,
+    rgb(var(--fg-rgb) / 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-name: none !important;
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

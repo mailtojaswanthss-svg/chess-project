@@ -1,0 +1,98 @@
+/* Migrated from the former monolithic styles.css; colours use design tokens. */
+.game-over-banner {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--surface-1)), var(--surface-1));
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent);
+  animation: slide-in 0.3s ease;
+}
+
+.game-over-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.game-over-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--accent-lime);
+  font-weight: 700;
+}
+
+.win-trophy {
+  color: var(--accent-lime);
+}
+
+.draw-trophy {
+  color: var(--accent-amber);
+}
+
+.dismiss-btn {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 4px;
+}
+
+.dismiss-btn:hover {
+  color: var(--text-1);
+}
+
+.outcome-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--text-1);
+  margin-bottom: 2px;
+}
+
+.outcome-reason {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.outcome-reason strong {
+  color: var(--text-1);
+}
+
+.coach-takeaway-box {
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid var(--accent-lime);
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.takeaway-badge {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--accent-lime);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.takeaway-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+.game-over-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.action-takeback {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent-lime);
+}

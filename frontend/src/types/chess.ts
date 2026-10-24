@@ -11,7 +11,7 @@ export type Analysis = {
   side_to_move?: "w" | "b";
 };
 
-export type PlayMode = "free_lab" | "max_engine" | "human_sparring" | "tricky_bot";
+export type PlayMode = "free_lab" | "max_engine" | "human_sparring" | "tricky_bot" | "trap_puzzle";
 export type AppTab = "arena" | "trap_dojo" | "blunder_dna" | "academy" | "settings";
 
 export interface AcademyLesson {

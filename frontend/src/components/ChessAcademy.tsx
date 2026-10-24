@@ -1,15 +1,6 @@
-import React, { useState } from "react";
-import {
-  GraduationCap,
-  BookOpen,
-  Swords,
-  Shield,
-  Compass,
-  Sparkles,
-  Play,
-  CheckCircle2,
-  Filter,
-} from "lucide-react";
+import "./ChessAcademy.css";
+import React, { useEffect, useRef, useState } from "react";
+import { BookOpen, Swords, Shield, Compass, Play, CheckCircle2, type LucideIcon } from "lucide-react";
 import type { AcademyLesson } from "../types/chess";
 import { playSound } from "../utils/audio";
 
@@ -148,204 +139,179 @@ export const ACADEMY_LESSONS: AcademyLesson[] = [
   },
 ];
 
-export const ChessAcademy: React.FC<ChessAcademyProps> = ({ onPracticePosition, initialPillar = "all" }) => {
-  const [selectedPillar, setSelectedPillar] = useState<string>(initialPillar);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+type Pillar = AcademyLesson["pillar"];
 
-  React.useEffect(() => {
-    if (initialPillar && initialPillar !== "all") {
-      setSelectedPillar(initialPillar);
+const PILLARS: { id: Pillar; title: string; blurb: string; icon: LucideIcon; tone: string }[] = [
+  { id: "opening", title: "Openings", blurb: "Centre, development, king safety", icon: Compass, tone: "accent" },
+  { id: "middlegame", title: "Middlegames", blurb: "Plans, pins and attacks", icon: Swords, tone: "violet" },
+  { id: "endgame", title: "Endgames", blurb: "Technique and the active king", icon: BookOpen, tone: "warn" },
+  { id: "defense", title: "Defense", blurb: "Prophylaxis and parrying threats", icon: Shield, tone: "danger" },
+];
+
+const DIFFICULTIES = ["all", "Beginner", "Intermediate", "Master"] as const;
+
+const GLYPH: Record<string, string> = {
+  K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
+  k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟",
+};
+
+/** Static, non-interactive preview of a FEN position. */
+const MiniBoard: React.FC<{ fen: string }> = ({ fen }) => {
+  const rows = (fen.split(" ")[0] ?? "").split("/");
+  const cells: { piece: string; dark: boolean }[] = [];
+  rows.forEach((row, r) => {
+    let file = 0;
+    for (const ch of row) {
+      if (/\d/.test(ch)) {
+        for (let i = 0; i < Number(ch); i++) cells.push({ piece: "", dark: (r + file++) % 2 === 1 });
+      } else {
+        cells.push({ piece: ch, dark: (r + file++) % 2 === 1 });
+      }
     }
+  });
+  return (
+    <div className="mini-board" aria-hidden="true">
+      {cells.map((c, i) => (
+        <span key={i} className={`mini-sq ${c.dark ? "is-dark" : ""} ${c.piece && c.piece === c.piece.toUpperCase() ? "is-white" : "is-black"}`}>
+          {c.piece ? GLYPH[c.piece] : ""}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+export const ChessAcademy: React.FC<ChessAcademyProps> = ({ onPracticePosition, initialPillar = "all" }) => {
+  const [focusPillar, setFocusPillar] = useState<string>(initialPillar);
+  const [difficulty, setDifficulty] = useState<(typeof DIFFICULTIES)[number]>("all");
+  const columnRefs = useRef<Partial<Record<Pillar, HTMLElement | null>>>({});
+
+  useEffect(() => {
+    setFocusPillar(initialPillar || "all");
   }, [initialPillar]);
 
-  const filteredLessons = ACADEMY_LESSONS.filter((lesson) => {
-    if (selectedPillar !== "all" && lesson.pillar !== selectedPillar) return false;
-    if (selectedDifficulty !== "all" && lesson.difficulty.toLowerCase() !== selectedDifficulty.toLowerCase())
-      return false;
-    return true;
-  });
-
-  const getPillarMeta = (pillar: AcademyLesson["pillar"]) => {
-    switch (pillar) {
-      case "opening":
-        return {
-          title: "Opening Mastery",
-          badgeColor: "#38bdf8",
-          icon: Compass,
-          headerTone: "cyan-pillar",
-        };
-      case "middlegame":
-        return {
-          title: "Middlegame Warfare",
-          badgeColor: "#a855f7",
-          icon: Swords,
-          headerTone: "violet-pillar",
-        };
-      case "endgame":
-        return {
-          title: "Endgame Precision",
-          badgeColor: "#f59e0b",
-          icon: BookOpen,
-          headerTone: "amber-pillar",
-        };
-      case "defense":
-        return {
-          title: "Art of Defense & Prophylaxis",
-          badgeColor: "#ef4444",
-          icon: Shield,
-          headerTone: "crimson-pillar",
-        };
-    }
-  };
+  // Bring the focused pillar into view (matters when the grid stacks on narrow screens)
+  useEffect(() => {
+    if (focusPillar === "all") return;
+    columnRefs.current[focusPillar as Pillar]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [focusPillar]);
 
   return (
-    <div className="academy-container">
-      {/* 1. Academy Hero Header */}
-      <div className="academy-header-card">
-        <div className="academy-badge-pill">
-          <GraduationCap size={18} className="text-cyan" />
-          <span>GRANDMASTER CURRICULUM</span>
-        </div>
-        <h2>ChessWise Tactical &amp; Strategic Academy</h2>
-        <p>
-          Master the four cornerstones of high-level chess: opening harmony, sharp tactical calculation,
-          endgame precision, and ironclad prophylaxis. Practice each position directly in our Free Lab.
-        </p>
-
-        {/* Pillar Filter Bar */}
-        <div className="academy-filter-bar">
-          <div className="filter-group">
-            <span className="filter-group-label">Pillar:</span>
-            <button
-              className={`academy-filter-btn ${selectedPillar === "all" ? "active" : ""}`}
-              onClick={() => {
-                playSound("click");
-                setSelectedPillar("all");
-              }}
-            >
-              All Pillars ({ACADEMY_LESSONS.length})
-            </button>
-            <button
-              className={`academy-filter-btn opening ${selectedPillar === "opening" ? "active" : ""}`}
-              onClick={() => {
-                playSound("click");
-                setSelectedPillar("opening");
-              }}
-            >
-              🟦 Opening Mastery
-            </button>
-            <button
-              className={`academy-filter-btn middlegame ${selectedPillar === "middlegame" ? "active" : ""}`}
-              onClick={() => {
-                playSound("click");
-                setSelectedPillar("middlegame");
-              }}
-            >
-              🟪 Middlegame Warfare
-            </button>
-            <button
-              className={`academy-filter-btn endgame ${selectedPillar === "endgame" ? "active" : ""}`}
-              onClick={() => {
-                playSound("click");
-                setSelectedPillar("endgame");
-              }}
-            >
-              🟧 Endgame Precision
-            </button>
-            <button
-              className={`academy-filter-btn defense ${selectedPillar === "defense" ? "active" : ""}`}
-              onClick={() => {
-                playSound("click");
-                setSelectedPillar("defense");
-              }}
-            >
-              🟥 Defense &amp; Prophylaxis
-            </button>
-          </div>
-
-          <div className="filter-group right">
-            <span className="filter-group-label">Difficulty:</span>
-            {["all", "beginner", "intermediate", "master"].map((diff) => (
-              <button
-                key={diff}
-                className={`academy-filter-btn diff-btn ${selectedDifficulty === diff ? "active" : ""}`}
-                onClick={() => {
-                  playSound("click");
-                  setSelectedDifficulty(diff);
-                }}
-              >
-                {diff.charAt(0).toUpperCase() + diff.slice(1)}
-              </button>
-            ))}
-          </div>
+    <div className="view academy">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Lessons</h1>
+          <p className="page-sub">Eight hand-picked positions across the four stages of a game. Open any of them on the board and play it out.</p>
         </div>
       </div>
 
-      {/* 2. Four Color-Coded Learning Columns / Cards Grid */}
-      <div className="academy-lessons-grid">
-        {filteredLessons.map((lesson) => {
-          const meta = getPillarMeta(lesson.pillar);
-          const PillarIcon = meta.icon;
+      <div className="academy-filters">
+        <div className="segmented" role="group" aria-label="Focus a pillar">
+          <button
+            className={`segmented__btn ${focusPillar === "all" ? "is-active" : ""}`}
+            aria-pressed={focusPillar === "all"}
+            onClick={() => {
+              playSound("click");
+              setFocusPillar("all");
+            }}
+          >
+            All pillars
+          </button>
+          {PILLARS.map((p) => (
+            <button
+              key={p.id}
+              className={`segmented__btn ${focusPillar === p.id ? "is-active" : ""}`}
+              aria-pressed={focusPillar === p.id}
+              onClick={() => {
+                playSound("click");
+                setFocusPillar(p.id);
+              }}
+            >
+              <p.icon size={14} aria-hidden="true" /> {p.title}
+            </button>
+          ))}
+        </div>
+        <div className="segmented" role="group" aria-label="Difficulty">
+          {DIFFICULTIES.map((d) => (
+            <button
+              key={d}
+              className={`segmented__btn ${difficulty === d ? "is-active" : ""}`}
+              aria-pressed={difficulty === d}
+              onClick={() => {
+                playSound("click");
+                setDifficulty(d);
+              }}
+            >
+              {d === "all" ? "Any level" : d}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      <div className={`pillar-grid ${focusPillar !== "all" ? "has-focus" : ""}`}>
+        {PILLARS.map((pillar, colIdx) => {
+          const lessons = ACADEMY_LESSONS.filter(
+            (l) => l.pillar === pillar.id && (difficulty === "all" || l.difficulty === difficulty),
+          );
+          const total = ACADEMY_LESSONS.filter((l) => l.pillar === pillar.id).length;
+          const Icon = pillar.icon;
           return (
-            <div key={lesson.id} className={`academy-lesson-card ${meta.headerTone}`}>
-              {/* Card Header */}
-              <div className="lesson-card-header">
-                <div className="lesson-pillar-badge" style={{ borderColor: meta.badgeColor, color: meta.badgeColor }}>
-                  <PillarIcon size={13} />
-                  <span>{meta.title}</span>
-                </div>
-                <span
-                  className={`lesson-diff-tag ${
-                    lesson.difficulty === "Beginner"
-                      ? "diff-beginner"
-                      : lesson.difficulty === "Intermediate"
-                      ? "diff-intermediate"
-                      : "diff-master"
-                  }`}
-                >
-                  {lesson.difficulty}
+            <section
+              key={pillar.id}
+              ref={(el) => {
+                columnRefs.current[pillar.id] = el;
+              }}
+              className={`pillar pillar--${pillar.tone} ${focusPillar === pillar.id ? "is-focused" : ""}`}
+              style={{ "--i": colIdx } as React.CSSProperties}
+              aria-label={pillar.title}
+            >
+              <header className="pillar__head">
+                <span className="pillar__icon">
+                  <Icon size={18} aria-hidden="true" />
                 </span>
-              </div>
+                <div className="pillar__titles">
+                  <h2 className="pillar__title">{pillar.title}</h2>
+                  <p className="pillar__blurb">{pillar.blurb}</p>
+                </div>
+                <span className="pillar__count num">{lessons.length}/{total}</span>
+              </header>
 
-              {/* Title & Subtitle */}
-              <h3 className="lesson-title">{lesson.title}</h3>
-              <p className="lesson-subtitle">{lesson.subtitle}</p>
-
-              {/* Objective Box */}
-              <div className="lesson-objective-box">
-                <strong className="obj-title">Core Objective:</strong>
-                <p className="obj-text">{lesson.objective}</p>
-              </div>
-
-              {/* Key Takeaways */}
-              <div className="lesson-keypoints-list">
-                <strong className="keypoints-title">Key Tactical Takeaways:</strong>
-                <ul>
-                  {lesson.keyPoints.map((point, pIdx) => (
-                    <li key={pIdx}>
-                      <CheckCircle2 size={13} className="point-icon" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Practice in Free Lab Action Button */}
-              <div className="lesson-footer-action">
-                <button
-                  className="practice-lab-btn"
-                  onClick={() => {
-                    playSound("click");
-                    onPracticePosition(lesson.fen, lesson.title);
-                  }}
-                  title="Load this curated position into the Tactical Arena Free Lab"
-                >
-                  <Play size={14} />
-                  <span>Practice Position in Free Lab</span>
-                </button>
-              </div>
-            </div>
+              {lessons.length === 0 ? (
+                <p className="pillar__empty">No {difficulty.toLowerCase()} lessons here yet.</p>
+              ) : (
+                lessons.map((lesson) => (
+                  <article key={lesson.id} className="lesson card card--interactive">
+                    <MiniBoard fen={lesson.fen} />
+                    <div className="lesson__head">
+                      <h3 className="lesson__title">{lesson.title}</h3>
+                      <span className={`pill lesson__level lesson__level--${lesson.difficulty.toLowerCase()}`}>
+                        {lesson.difficulty}
+                      </span>
+                    </div>
+                    <p className="lesson__objective">{lesson.objective}</p>
+                    <details className="lesson__points">
+                      <summary>Key ideas ({lesson.keyPoints.length})</summary>
+                      <ul>
+                        {lesson.keyPoints.map((point) => (
+                          <li key={point}>
+                            <CheckCircle2 size={13} aria-hidden="true" />
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                    <button
+                      className="btn btn--primary lesson__load"
+                      onClick={() => {
+                        playSound("click");
+                        onPracticePosition(lesson.fen, lesson.title);
+                      }}
+                    >
+                      <Play size={14} /> Play this position
+                    </button>
+                  </article>
+                ))
+              )}
+            </section>
           );
         })}
       </div>

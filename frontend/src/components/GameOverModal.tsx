@@ -1,3 +1,4 @@
+import "./GameOverModal.css";
 import React from "react";
 import { Trophy, Undo2, RotateCcw, Download, Eye, X } from "lucide-react";
 import type { SavedGame } from "../types/chess";

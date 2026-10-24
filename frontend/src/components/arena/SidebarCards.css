@@ -1,0 +1,352 @@
+/* Outlook */
+.outlook-score {
+  font-size: 1.35rem;
+  color: var(--gold);
+}
+
+.outlook--final {
+  border-color: color-mix(in srgb, var(--gold) 35%, transparent);
+  animation: pop-in 520ms var(--ease-out) backwards;
+}
+
+.outlook-foot {
+  font-size: var(--text-small);
+  color: var(--text-3);
+}
+
+.outlook-last {
+  color: var(--text-1);
+}
+
+.wdl {
+  display: grid;
+  gap: 8px;
+}
+
+.wdl__bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: #2a302d;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.wdl__seg {
+  flex-basis: 0;
+  min-width: 2px;
+  transition: flex-grow var(--dur-slow) var(--ease-out);
+}
+
+.wdl__seg--white { background: #f6f7f6; box-shadow: inset 0 0 0 1px var(--border-strong); }
+.wdl__seg--draw { background: #7b8670; }
+.wdl__seg--black { background: #080c08; box-shadow: inset 0 0 0 1px var(--border-strong); }
+
+.wdl__legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-label);
+  color: var(--text-3);
+}
+
+.wdl__legend .num {
+  color: var(--text-1);
+}
+
+.wdl-skeleton {
+  height: 34px;
+}
+
+.outlook-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: var(--text-small);
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.outlook-status .live-dot { animation-duration: 2.4s; }
+.outlook-status--good .live-dot { color: var(--good); }
+.outlook-status--accent .live-dot { color: var(--accent); }
+.outlook-status--warn .live-dot { color: var(--warn); }
+.outlook-status--danger { background: var(--danger-soft); color: var(--danger-text); }
+.outlook-status--danger .live-dot { color: var(--danger); }
+
+/* Coach */
+.coach.has-advice {
+  border-color: color-mix(in srgb, var(--violet) 35%, transparent);
+}
+
+.coach-ask {
+  flex-shrink: 0;
+}
+
+.coach-loading {
+  display: grid;
+  gap: 10px;
+}
+
+.coach-advice {
+  display: grid;
+  gap: 12px;
+  animation: rise-in var(--dur-med) var(--ease-out) backwards;
+}
+
+.coach-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coach-source {
+  font-size: var(--text-label);
+  color: var(--text-3);
+}
+
+.coach-headline {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.coach-threat {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-size: var(--text-small);
+}
+
+.coach-threat svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.coach-rec {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coach-rec__label {
+  font-size: var(--text-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.coach-rec__move {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--good-soft);
+  color: var(--good);
+  font-weight: 500;
+}
+
+.coach-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.coach-tag {
+  font-size: var(--text-label);
+  color: var(--accent);
+}
+
+/* Threats */
+.threats-clear {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+}
+
+.threats-clear svg {
+  color: var(--good);
+  flex-shrink: 0;
+}
+
+.threat-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.threat {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  cursor: default;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.threat:hover,
+.threat:focus-visible {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--danger-soft);
+  outline: none;
+}
+
+.threat__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.threat--hanging .threat__icon,
+.threat--check .threat__icon {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.threat--pinned .threat__icon {
+  color: var(--violet);
+  background: var(--violet-soft);
+}
+
+.threat__text {
+  display: grid;
+  min-width: 0;
+  font-size: var(--text-small);
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+.threat__text strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.threat__sq {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  font-size: var(--text-label);
+  color: var(--text-1);
+  text-transform: uppercase;
+}
+
+/* Trap puzzle */
+.puzzle--solved {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  animation: pop-in 520ms var(--ease-out) backwards;
+}
+
+.puzzle--wrong {
+  animation: shake 360ms var(--ease-out);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+.puzzle-brief {
+  display: grid;
+  gap: 8px;
+}
+
+.puzzle-brief__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.puzzle-brief__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.puzzle-brief strong {
+  color: var(--text-1);
+}
+
+.puzzle-move {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.puzzle-progress {
+  display: flex;
+  gap: 6px;
+}
+
+.puzzle-dot {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: rgb(var(--fg-rgb) / 0.14);
+  transition: background var(--dur-med) var(--ease-out);
+}
+
+.puzzle-dot.is-done {
+  background: var(--good);
+}
+
+.puzzle-dot.is-next {
+  background: rgb(var(--fg-rgb) / 0.45);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.puzzle-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.puzzle-status--correct,
+.puzzle-status--solved {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.puzzle-status--wrong {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.puzzle-explain {
+  font-size: var(--text-small);
+  color: var(--text-2);
+  animation: slide-down var(--dur-med) var(--ease-out) backwards;
+}
+
+.puzzle-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.puzzle-actions__spacer {
+  flex: 1;
+}

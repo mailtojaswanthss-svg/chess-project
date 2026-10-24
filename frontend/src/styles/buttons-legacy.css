@@ -1,0 +1,58 @@
+/* Migrated from the former monolithic styles.css; colours use design tokens. */
+.icon-action-btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: rgb(var(--fg-rgb) / 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.icon-action-btn:hover {
+  color: var(--text-1);
+  background: rgb(var(--fg-rgb) / 0.09);
+  border-color: rgb(var(--fg-rgb) / 0.15);
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--on-accent);
+  background: var(--accent-lime);
+}
+
+.primary-btn:hover {
+  background: var(--accent-strong);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: rgb(var(--fg-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+}
+
+.secondary-btn:hover {
+  color: var(--text-1);
+  background: rgb(var(--fg-rgb) / 0.1);
+  border-color: rgb(var(--fg-rgb) / 0.2);
+}

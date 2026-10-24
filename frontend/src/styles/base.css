@@ -1,0 +1,90 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-width: 320px;
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--text-1);
+  background:
+    radial-gradient(ellipse 70% 40% at 50% -12%, var(--accent-soft), transparent 70%),
+    var(--surface-0);
+  transition: background-color var(--dur-med) var(--ease-out), color var(--dur-med) var(--ease-out);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+/* Numbers that should line up column to column */
+.num,
+[data-num] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Utility colour classes still used by icons */
+.text-cyan { color: var(--accent); }
+.text-amber,
+.text-warning { color: var(--warn); }
+.text-danger { color: var(--danger); }
+.text-gold { color: var(--gold); }
+.text-emerald { color: var(--good); }
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}

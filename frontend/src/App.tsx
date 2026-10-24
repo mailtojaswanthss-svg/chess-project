@@ -1,22 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Chess, type Move, type Square } from "chess.js";
-import { Chessboard } from "react-chessboard";
 import type { Piece } from "react-chessboard/dist/chessboard/types";
-import {
-  RotateCcw,
-  Undo2,
-  FlipHorizontal2,
-  Copy,
-  Download,
-  AlertCircle,
-  Loader2,
-  Check,
-  Lightbulb,
-  Maximize2,
-  Layers,
-  Target,
-  Dna,
-} from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 
 import type {
   Analysis,
@@ -26,16 +11,14 @@ import type {
   ModelHealth,
   MovePair,
   PlayMode,
+  ThreatItem,
   SavedGame,
   TacticalAnalysis,
   CoachExplanation,
 } from "./types/chess";
 import { Header } from "./components/Header";
-import { EvaluationBar } from "./components/EvaluationBar";
-import { BlunderRiskMeter } from "./components/BlunderRiskMeter";
 import { MoveHistory } from "./components/MoveHistory";
 import { GameOverModal } from "./components/GameOverModal";
-import { GameReview } from "./components/GameReview";
 import { SettingsModal } from "./components/SettingsModal";
 import { TrapDrillMode } from "./components/TrapDrillMode";
 import { BlunderDnaProfiler } from "./components/BlunderDnaProfiler";
@@ -43,6 +26,21 @@ import { BoardHud } from "./components/BoardHud";
 import { CandidateMovesCard } from "./components/CandidateMovesCard";
 import { ChessAcademy } from "./components/ChessAcademy";
 import { SettingsTab } from "./components/SettingsTab";
+import { ConfirmDialog } from "./components/ConfirmDialog";
+import { ArenaView } from "./components/arena/ArenaView";
+import { ArenaBoard } from "./components/arena/ArenaBoard";
+import { PlayToolbar, MAIA_RATINGS } from "./components/arena/PlayToolbar";
+import { PlayerStrip } from "./components/arena/PlayerStrip";
+import { OverlayControls, type OverlayState } from "./components/arena/OverlayControls";
+import { InfluencePanel } from "./components/arena/InfluencePanel";
+import { BoardControls } from "./components/arena/BoardControls";
+import { OutlookCard } from "./components/arena/OutlookCard";
+import { CoachCard } from "./components/arena/CoachCard";
+import { ThreatRadarCard } from "./components/arena/ThreatRadarCard";
+import { ReviewWorkspace } from "./components/review/ReviewWorkspace";
+import { PuzzleCard, type PuzzleStatus } from "./components/arena/PuzzleCard";
+import { useTrapPuzzles, puzzleStartPosition, puzzleSolveLength, puzzleSolverColor } from "./utils/useTrapPuzzles";
+import { useAppearance } from "./utils/useAppearance";
 import {
   gameOutcome,
   getKingSquare,
@@ -51,19 +49,23 @@ import {
   computeLocalTerritory,
   classifyMove,
   getMoveBadgeInfo,
+  riskFor,
 } from "./utils/chessUtils";
 import { playSound, setSoundEnabled } from "./utils/audio";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const SAVED_GAMES_KEY = "chesswise.completed-games";
 const STARTING_FEN = new Chess().fen();
-const ratingOptions = [800, 1000, 1200, 1400, 1600, 1800, 2000, 2400, 2800];
+const NO_THREATS: ThreatItem[] = [];
 
 export default function App() {
+  const appearance = useAppearance();
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [fenHistory, setFenHistory] = useState<string[]>([STARTING_FEN]);
   const [rating, setRating] = useState<number>(1200);
   const [playMode, setPlayMode] = useState<PlayMode>("free_lab");
+  const playModeRef = useRef<PlayMode>("free_lab");
+  playModeRef.current = playMode;
   const [activeTab, setActiveTab] = useState<AppTab>("arena");
   const [isReviewingGame, setIsReviewingGame] = useState<boolean>(false);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
@@ -71,7 +73,9 @@ export default function App() {
   const [boardSize, setBoardSize] = useState<"compact" | "standard" | "large">(() => {
     return (localStorage.getItem("chesswise.board-size") as "compact" | "standard" | "large") || "standard";
   });
-  const [showTerritoryHeatmap, setShowTerritoryHeatmap] = useState<boolean>(false);
+  const [overlays, setOverlays] = useState<OverlayState>({ influence: false, threats: false, arrows: true });
+  const [confirmClear, setConfirmClear] = useState<boolean>(false);
+  const showTerritoryHeatmap = overlays.influence;
   const territoryControl = useMemo(() => computeLocalTerritory(game), [game]);
 
   const handleToggleBoardSize = () => {
@@ -119,6 +123,27 @@ export default function App() {
     }
   });
 
+  // Each mode keeps its own game; switching modes parks the current one here
+  type ModeSession = {
+    game: Chess;
+    fenHistory: string[];
+    completed: SavedGame | null;
+    isFlipped: boolean;
+    rating: number;
+    evaluation: number | null;
+  };
+  const sessionsRef = useRef<Partial<Record<PlayMode, ModeSession>>>({});
+  const resumeBotRef = useRef<boolean>(false);
+
+  // Trap puzzles (arena mode)
+  const puzzles = useTrapPuzzles(API_URL);
+  const [puzzleIndex, setPuzzleIndex] = useState<number>(0);
+  const [puzzleStep, setPuzzleStep] = useState<number>(0);
+  const [puzzleStatus, setPuzzleStatus] = useState<PuzzleStatus>("solving");
+  const [puzzleSolved, setPuzzleSolved] = useState<Set<string>>(() => new Set());
+  const puzzleTimerRef = useRef<number[]>([]);
+  const activePuzzle = puzzles.length ? puzzles[puzzleIndex % puzzles.length] : undefined;
+
   // Review & Model Health
   const [gameReport, setGameReport] = useState<GameReport | null>(null);
   const [selectedReviewPly, setSelectedReviewPly] = useState<number | null>(null);
@@ -138,9 +163,10 @@ export default function App() {
     if (!el) return;
 
     const updateDimensions = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 200) {
-        setBoardWidth(Math.floor(rect.width));
+      // clientWidth excludes the frame border; subtract the frame's 3px padding on each side
+      const width = el.clientWidth - 6;
+      if (width > 160) {
+        setBoardWidth(Math.floor(width));
       }
     };
 
@@ -148,10 +174,10 @@ export default function App() {
     const ro = new ResizeObserver(updateDimensions);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [boardSize, activeTab]);
+  }, [boardSize, activeTab, isReviewingGame, gameReport]);
 
   // Derived Board Telemetry
-  const history = game.history({ verbose: true });
+  const history = useMemo(() => game.history({ verbose: true }), [game]);
   const sideToMove = game.turn();
   const isCheck = game.isCheck();
   const kingSquare = isCheck ? getKingSquare(game, sideToMove) : null;
@@ -192,10 +218,12 @@ export default function App() {
     playMode === "max_engine"
       ? `Stockfish 16 (${rating} Elo)`
       : playMode === "tricky_bot"
-      ? `Tricky Bot`
+      ? `The Trapper (${rating})`
       : playMode === "human_sparring"
       ? `Maia-2 (${rating} Elo)`
-      : "Free Lab (Sandbox)";
+      : playMode === "trap_puzzle"
+      ? "Trap puzzle opponent"
+      : "Free play";
 
   // Synchronize saved games with localStorage
   useEffect(() => {
@@ -296,15 +324,120 @@ export default function App() {
     [rating]
   );
 
-  // Initial analysis
+  // Analyse on mount and again whenever the rating changes, so requests never carry a stale rating
   useEffect(() => {
-    void analyzePosition(game);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (playModeRef.current === "trap_puzzle") return;
+    const timer = window.setTimeout(() => void analyzePosition(game), 200);
+    return () => window.clearTimeout(timer);
+  }, [analyzePosition]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const clearPuzzleTimers = () => {
+    puzzleTimerRef.current.forEach((t) => window.clearTimeout(t));
+    puzzleTimerRef.current = [];
+  };
+
+  // Put a puzzle on the board: the opponent's tempting move is already played
+  const loadPuzzle = (index: number) => {
+    if (!puzzles.length) return;
+    clearPuzzleTimers();
+    const puzzle = puzzles[((index % puzzles.length) + puzzles.length) % puzzles.length];
+    const start = puzzleStartPosition(puzzle);
+    moveRequestIdRef.current++;
+    analysisRequestIdRef.current++;
+    setPuzzleIndex(puzzles.indexOf(puzzle));
+    setPuzzleStep(0);
+    setPuzzleStatus("solving");
+    setGame(start);
+    setFenHistory([puzzle.fen, start.fen()]);
+    setIsFlipped(puzzleSolverColor(puzzle) === "b");
+    setCompletedGameSummary(null);
+    setSelectedSquare(null);
+    setOptionSquares({});
+    setHintArrow([]);
+    setTacticalAnalysis(null);
+    setAnalysis(null);
+    setEngineEvaluation(null);
+    setError(null);
+  };
+
+  const handleSelectMode = (mode: PlayMode) => {
+    if (mode === playMode) return;
+    playSound("click");
+    clearPuzzleTimers();
+    moveRequestIdRef.current++;
+    analysisRequestIdRef.current++;
+    setIsBotThinking(false);
+    setIsAnalyzing(false);
+
+    // Park the current game, then bring back the target mode's game (or start one)
+    sessionsRef.current[playMode] = {
+      game,
+      fenHistory,
+      completed: completedGameSummary,
+      isFlipped,
+      rating,
+      evaluation: engineEvaluation,
+    };
+    setPlayMode(mode);
+    setSelectedSquare(null);
+    setOptionSquares({});
+    setHintArrow([]);
+    setHoveredCandidateMove(null);
+    setHoveredThreatSquare(null);
+    setCoachAdvice(null);
+    setTacticalAnalysis(null);
+    setAnalysis(null);
+    setError(null);
+
+    if (mode === "trap_puzzle") {
+      const saved = sessionsRef.current.trap_puzzle;
+      if (saved) {
+        setGame(saved.game);
+        setFenHistory(saved.fenHistory);
+        setIsFlipped(saved.isFlipped);
+        setEngineEvaluation(null);
+        setCompletedGameSummary(null);
+      } else {
+        loadPuzzle(puzzleIndex);
+      }
+      return;
+    }
+
+    const saved = sessionsRef.current[mode];
+    const nextRating = saved?.rating ?? (mode === "human_sparring" && !MAIA_RATINGS.includes(rating) ? 1500 : rating);
+    const nextGame = saved?.game ?? new Chess();
+    setGame(nextGame);
+    setFenHistory(saved?.fenHistory ?? [STARTING_FEN]);
+    setCompletedGameSummary(saved?.completed ?? null);
+    setIsFlipped(saved?.isFlipped ?? false);
+    setEngineEvaluation(saved?.evaluation ?? null);
+    setRating(nextRating);
+    // If the bot was to move when this game was parked, let it move once the mode is active
+    resumeBotRef.current = Boolean(saved) && !saved?.completed;
+    if (nextRating === rating) void analyzePosition(nextGame);
+  };
+
+  // A rated game locks its rating until it ends or a new game starts
+  const ratedModes: PlayMode[] = ["max_engine", "human_sparring", "tricky_bot"];
+  const ratingLocked = ratedModes.includes(playMode) && game.history().length > 0 && !completedGameSummary;
+  const handleSetRating = (r: number) => {
+    if (ratingLocked) {
+      showToast("Rating is locked for this game. Start a new game to change it.");
+      return;
+    }
+    setRating(r);
+    playSound("click");
+  };
+
+  const handleToggleOverlay = (key: keyof OverlayState) => {
+    playSound("click");
+    setOverlays((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Request Engine Opponent Move (Stockfish / Trap / Maia)
   const requestBotMove = useCallback(
     async (position: Chess) => {
-      if (playMode === "free_lab") return;
+      if (playMode === "free_lab" || playMode === "trap_puzzle") return;
       const reqId = ++moveRequestIdRef.current;
       setIsBotThinking(true);
       setError(null);
@@ -408,7 +541,7 @@ export default function App() {
       const botMove = (await res.json()) as BotMove;
       const from = botMove.uci.slice(0, 2) as Square;
       const to = botMove.uci.slice(2, 4) as Square;
-      setHintArrow([[from, to, "rgba(74, 222, 128, 0.9)"]]);
+      setHintArrow([[from, to, "rgba(255, 205, 86, 0.95)"]]);
       showToast(`Coach Hint: ${botMove.san}`);
     } catch {
       showToast("Hint unavailable for this position");
@@ -469,6 +602,48 @@ export default function App() {
 
       if (!move) return false;
 
+      if (playMode === "trap_puzzle") {
+        if (!activePuzzle || puzzleStatus === "solved" || puzzleStatus === "revealed") return false;
+        const line = activePuzzle.punishment_line;
+        const expected = line[puzzleStep];
+        if (move.san !== expected && !next.isCheckmate()) {
+          setPuzzleStatus("wrong");
+          playSound("blunder");
+          setSelectedSquare(null);
+          setOptionSquares({});
+          return false;
+        }
+        setGame(next);
+        setFenHistory((prev) => [...prev, next.fen()]);
+        setSelectedSquare(null);
+        setOptionSquares({});
+        setHintArrow([]);
+        playSound(move.captured ? "capture" : next.isCheck() ? "check" : "move");
+        const done = puzzleStep + 1;
+        if (done >= puzzleSolveLength(activePuzzle) || next.isCheckmate()) {
+          setPuzzleStep(done);
+          setPuzzleStatus("solved");
+          setPuzzleSolved((prev) => new Set(prev).add(activePuzzle.id));
+          playSound("game_end");
+          return true;
+        }
+        // Correct: the opponent replies with the next move of the line
+        setPuzzleStep(done);
+        setPuzzleStatus("correct");
+        const timer = window.setTimeout(() => {
+          const replyBoard = new Chess();
+          replyBoard.loadPgn(next.pgn());
+          const reply = replyBoard.move(line[done]);
+          setGame(replyBoard);
+          setFenHistory((prev) => [...prev, replyBoard.fen()]);
+          setPuzzleStep(done + 1);
+          setPuzzleStatus("solving");
+          playSound(reply?.captured ? "capture" : replyBoard.isCheck() ? "check" : "move");
+        }, 550);
+        puzzleTimerRef.current.push(timer);
+        return true;
+      }
+
       setGame(next);
       setFenHistory((prev) => [...prev, next.fen()]);
       setSelectedSquare(null);
@@ -492,8 +667,53 @@ export default function App() {
 
       return true;
     },
-    [completedGameSummary, isBotThinking, game, playMode, requestBotMove, analyzePosition]
+    [completedGameSummary, isBotThinking, game, playMode, requestBotMove, analyzePosition, activePuzzle, puzzleStep, puzzleStatus]
   );
+
+  // Resume a parked bot game whose bot was to move
+  useEffect(() => {
+    if (!resumeBotRef.current) return;
+    resumeBotRef.current = false;
+    if (!ratedModes.includes(playMode) || completedGameSummary || gameOutcome(game)) return;
+    const userColor = isFlipped ? "b" : "w";
+    if (game.turn() !== userColor) void requestBotMove(game);
+  }, [playMode, game, requestBotMove]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePuzzleHint = () => {
+    if (!activePuzzle) return;
+    const expected = activePuzzle.punishment_line[puzzleStep];
+    const probe = new Chess(game.fen());
+    try {
+      const m = probe.move(expected);
+      setOptionSquares({ [m.from]: { boxShadow: "inset 0 0 0 4px rgba(238, 238, 210, 0.95)", background: "rgba(238, 238, 210, 0.35)" } });
+      showToast("Hint: move the highlighted piece");
+    } catch {
+      showToast("No hint for this position");
+    }
+  };
+
+  // Play the rest of the line on the board, one move at a time
+  const handlePuzzleReveal = () => {
+    if (!activePuzzle) return;
+    clearPuzzleTimers();
+    setPuzzleStatus("revealed");
+    const line = activePuzzle.punishment_line;
+    let board = new Chess();
+    board.loadPgn(game.pgn());
+    for (let i = puzzleStep; i < puzzleSolveLength(activePuzzle); i++) {
+      const timer = window.setTimeout(() => {
+        const nextBoard = new Chess();
+        nextBoard.loadPgn(board.pgn());
+        nextBoard.move(line[i]);
+        board = nextBoard;
+        setGame(nextBoard);
+        setFenHistory((prev) => [...prev, nextBoard.fen()]);
+        setPuzzleStep(i + 1);
+        playSound("move");
+      }, 650 * (i - puzzleStep + 1));
+      puzzleTimerRef.current.push(timer);
+    }
+  };
 
   // react-chessboard drag and drop drop handler
   const onPieceDrop = (sourceSquare: Square, targetSquare: Square): boolean => {
@@ -655,9 +875,20 @@ export default function App() {
     setCoachAdvice(null);
     setEngineEvaluation(null);
     setError(null);
+    setIsBotThinking(false);
     playSound("move");
-    showToast("New game initialized");
-    void analyzePosition(next);
+    if (playMode === "trap_puzzle") {
+      loadPuzzle(puzzleIndex);
+      showToast("Puzzle reset");
+      return;
+    }
+    showToast("New game");
+    // Playing Black against a bot: the bot opens
+    if (ratedModes.includes(playMode) && isFlipped) {
+      void requestBotMove(next);
+    } else {
+      void analyzePosition(next);
+    }
   };
 
   // Copy FEN
@@ -696,10 +927,9 @@ export default function App() {
       if (!res.ok) throw new Error(body.detail ?? "Could not analyze uploaded PGN.");
       const report = body as GameReport;
       setGameReport(report);
+      setIsReviewingGame(true);
       if (report.moves.length > 0) {
-        const first = report.moves[0];
-        setSelectedReviewPly(first.ply);
-        setGame(new Chess(first.fen));
+        selectReviewPly(report, report.moves[0].ply);
       }
       showToast("Game PGN successfully analyzed");
     } catch (err) {
@@ -729,16 +959,15 @@ export default function App() {
   }, [playMode, game, isBotThinking, requestBotMove]);
 
   // Jump to move in Review
-  const handleSelectReviewPly = (ply: number) => {
-    if (!gameReport) return;
+  const selectReviewPly = (report: GameReport, ply: number) => {
     if (ply === 0) {
       setSelectedReviewPly(0);
-      const startFen = gameReport.moves[0]?.fen ?? STARTING_FEN;
+      const startFen = report.moves[0]?.fen ?? STARTING_FEN;
       setReviewGame(new Chess(startFen));
       playSound("move");
       return;
     }
-    const moveItem = gameReport.moves.find((m) => m.ply === ply);
+    const moveItem = report.moves.find((m) => m.ply === ply);
     if (!moveItem) return;
     setSelectedReviewPly(ply);
     const revBoard = new Chess(moveItem.fen);
@@ -749,6 +978,10 @@ export default function App() {
     }
     setReviewGame(revBoard);
     playSound("move");
+  };
+
+  const handleSelectReviewPly = (ply: number) => {
+    if (gameReport) selectReviewPly(gameReport, ply);
   };
 
   // Export Blunder practice FENs
@@ -801,7 +1034,7 @@ export default function App() {
       const report = body as GameReport;
       setGameReport(report);
       if (report.moves.length > 0) {
-        handleSelectReviewPly(report.moves[0].ply);
+        selectReviewPly(report, report.moves[0].ply);
       }
       showToast("Game review loaded with CAPS accuracy");
     } catch (err) {
@@ -816,10 +1049,12 @@ export default function App() {
     if (hoveredCandidateMove && hoveredCandidateMove.length >= 4) {
       const from = hoveredCandidateMove.slice(0, 2) as Square;
       const to = hoveredCandidateMove.slice(2, 4) as Square;
-      return [[from, to, "rgb(56, 189, 248)"]];
+      return [[from, to, "rgb(255, 150, 40)"]];
     }
-    return hintArrow;
-  }, [hoveredCandidateMove, hintArrow]);
+    return overlays.arrows ? hintArrow : [];
+  }, [hoveredCandidateMove, hintArrow, overlays.arrows]);
+
+  const threats = tacticalAnalysis?.threats ?? NO_THREATS;
 
   // Square Highlights: Territory Heatmap + Last move + King in check glow + Threat radar + Click-to-move options + Review badge
   const customSquareStyles = useMemo(() => {
@@ -830,20 +1065,20 @@ export default function App() {
       Object.entries(territoryControl.squares).forEach(([sq, data]) => {
         if (data.dominant === "w") {
           styles[sq] = {
-            backgroundColor: `rgba(6, 182, 212, ${0.16 + data.intensity * 0.22})`,
-            boxShadow: "inset 0 0 0 1px rgba(6, 182, 212, 0.35)",
+            backgroundColor: `rgba(255, 205, 86, ${0.22 + data.intensity * 0.3})`,
+            boxShadow: "inset 0 0 0 2px rgba(255, 205, 86, 0.55)",
             transition: "background-color 0.2s ease",
           };
         } else if (data.dominant === "b") {
           styles[sq] = {
-            backgroundColor: `rgba(239, 68, 68, ${0.16 + data.intensity * 0.22})`,
-            boxShadow: "inset 0 0 0 1px rgba(239, 68, 68, 0.35)",
+            backgroundColor: `rgba(196, 48, 72, ${0.22 + data.intensity * 0.3})`,
+            boxShadow: "inset 0 0 0 2px rgba(196, 48, 72, 0.55)",
             transition: "background-color 0.2s ease",
           };
         } else if (data.dominant === "contested") {
           styles[sq] = {
-            backgroundColor: "rgba(234, 179, 8, 0.22)",
-            boxShadow: "inset 0 0 0 1px rgba(234, 179, 8, 0.35)",
+            backgroundColor: "rgba(146, 110, 230, 0.3)",
+            boxShadow: "inset 0 0 0 2px rgba(146, 110, 230, 0.55)",
             transition: "background-color 0.2s ease",
           };
         }
@@ -868,7 +1103,18 @@ export default function App() {
       };
     }
 
-    // 3. Hovered tactical threat square highlight
+    // 3. Threat overlay: ring every flagged piece
+    if (overlays.threats) {
+      threats.forEach((t) => {
+        styles[t.square] = {
+          ...styles[t.square],
+          boxShadow: "inset 0 0 0 3px rgba(245, 158, 11, 0.95)",
+          background: "radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%)",
+        };
+      });
+    }
+
+    // 4. Hovered tactical threat square highlight
     if (hoveredThreatSquare) {
       styles[hoveredThreatSquare] = {
         background: "radial-gradient(circle, rgba(239, 68, 68, 0.85) 0%, rgba(220, 38, 38, 0.4) 65%, transparent 100%)",
@@ -889,6 +1135,8 @@ export default function App() {
     lastMove,
     hoveredThreatSquare,
     optionSquares,
+    overlays.threats,
+    threats,
   ]);
 
   // Review Board Square Highlights (from / to square of reviewed move + badge glow)
@@ -914,9 +1162,80 @@ export default function App() {
     return styles;
   }, [gameReport, selectedReviewPly]);
 
+  // Shared reset used whenever a position is loaded into the arena from another tab
+  const loadIntoArena = (loaded: Chess, toast: string, options: { freeLab?: boolean } = {}) => {
+    moveRequestIdRef.current++;
+    analysisRequestIdRef.current++;
+    setGame(loaded);
+    setFenHistory([loaded.fen()]);
+    if (options.freeLab) {
+      setPlayMode("free_lab");
+      setIsFlipped(loaded.turn() === "b");
+    }
+    setIsReviewingGame(false);
+    setCompletedGameSummary(null);
+    setSelectedSquare(null);
+    setOptionSquares({});
+    setHintArrow([]);
+    setCoachAdvice(null);
+    setHoveredCandidateMove(null);
+    setHoveredThreatSquare(null);
+    setSelectedReviewPly(null);
+    setError(null);
+    setActiveTab("arena");
+    showToast(toast);
+    void analyzePosition(loaded);
+  };
+
+  const handlePracticePosition = (fen: string, title: string) => {
+    const loaded = new Chess();
+    try {
+      loaded.load(fen);
+    } catch {
+      showToast("Could not load academy position");
+      return;
+    }
+    loadIntoArena(loaded, `Loaded "${title}" on the analysis board`, { freeLab: true });
+  };
+
+  const handleLoadSavedGame = (saved: SavedGame) => {
+    const loaded = new Chess();
+    try {
+      loaded.loadPgn(saved.pgn);
+    } catch {
+      showToast("Could not parse saved match PGN");
+      return;
+    }
+    loadIntoArena(loaded, "Match loaded into the arena");
+  };
+
+  const handleNavigateAcademy = (leakKey?: string) => {
+    const pillarByLeak: Record<string, string> = {
+      pins: "middlegame",
+      hanging_pieces: "opening",
+      overloaded_defenders: "defense",
+      back_rank: "defense",
+      time_scramble: "endgame",
+      pawn_structure: "opening",
+    };
+    setAcademyPillar((leakKey && pillarByLeak[leakKey]) || "all");
+    setActiveTab("academy");
+  };
+
+  const clearArchive = () => {
+    setSavedGames([]);
+    setConfirmClear(false);
+    showToast("Archive cleared");
+  };
+
+  const riskScore = analysis?.blunder_probability ?? tacticalAnalysis?.overall_blunder_probability ?? 0;
+  const isLive = !completedGameSummary;
+  const opponentAvatar =
+    playMode === "max_engine" ? "⚡" : playMode === "tricky_bot" ? "🪤" : playMode === "human_sparring" ? "🧠" : "🧪";
+  const viewKey = activeTab === "arena" && isReviewingGame ? "review" : activeTab;
+
   return (
     <div className="app-shell">
-      {/* Top Header */}
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -926,28 +1245,27 @@ export default function App() {
         isFlipped={isFlipped}
         onFlipBoard={handleFlipBoard}
         onOpenSettings={() => setShowSettings(true)}
+        isDark={appearance.isDark}
+        onToggleTheme={() => appearance.setTheme(appearance.isDark ? "light" : "dark")}
       />
 
-      {/* Floating Toast Notification */}
       {toastMessage && (
-        <div className="toast-pill" role="status">
+        <div key={toastMessage} className="toast" role="status">
           <Check size={14} />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Backend Disconnection Banner */}
       {error && (
         <div className="error-banner" role="alert">
           <AlertCircle size={16} />
           <span>{error}</span>
-          <button className="banner-close" onClick={() => setError(null)}>
+          <button className="btn btn--ghost btn--sm" onClick={() => setError(null)}>
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Game Over Banner with Takeback & Review */}
       {completedGameSummary && (
         <GameOverModal
           gameSummary={completedGameSummary}
@@ -959,573 +1277,219 @@ export default function App() {
         />
       )}
 
-      {/* Subheader Toolbar: Mode Selector & Context-Aware Dynamic Elo */}
-      {activeTab === "arena" && !isReviewingGame && (
-        <div className="play-toolbar">
-          <div className="mode-segmented-control" role="group" aria-label="Game Mode">
-            <button
-              className={`mode-btn ${playMode === "free_lab" ? "active" : ""}`}
-              onClick={() => {
-                setPlayMode("free_lab");
-                setSelectedSquare(null);
-                setOptionSquares({});
-                playSound("click");
-              }}
-              title="Free Lab Sandbox: Explore lines with instant Grandmaster & Stockfish analysis"
-            >
-              <span>🧪 Free Lab</span>
-            </button>
-            <button
-              className={`mode-btn ${playMode === "max_engine" ? "active" : ""}`}
-              onClick={() => {
-                setPlayMode("max_engine");
-                setSelectedSquare(null);
-                setOptionSquares({});
-                playSound("click");
-              }}
-              title="Stockfish 16 Max Engine: Play against maximum engine strength (800 - 2800+ Elo)"
-            >
-              <span>⚡ Max Engine</span>
-            </button>
-            <button
-              className={`mode-btn ${playMode === "human_sparring" ? "active" : ""}`}
-              onClick={() => {
-                setPlayMode("human_sparring");
-                if (![1100, 1300, 1500, 1700, 1900].includes(rating)) {
-                  setRating(1500);
-                }
-                setSelectedSquare(null);
-                setOptionSquares({});
-                playSound("click");
-              }}
-              title="Human Sparring (Maia-2): Authentic human decision psychology"
-            >
-              <span>🧠 Human Sparring</span>
-            </button>
-            <button
-              className={`mode-btn ${playMode === "tricky_bot" ? "active" : ""}`}
-              onClick={() => {
-                setPlayMode("tricky_bot");
-                setSelectedSquare(null);
-                setOptionSquares({});
-                playSound("click");
-              }}
-              title="Tricky Bot: Deploys aggressive opening traps and poisonous tactics"
-            >
-              <span>🪤 Tricky Bot</span>
-            </button>
-          </div>
-
-          {/* Dynamic Context-Aware Elo Selector */}
-          <div className="dynamic-elo-selector-wrap">
-            {playMode === "human_sparring" && (
-              <div className="maia-elo-control">
-                <span className="rating-label">MAIA-2 ELO:</span>
-                <div className="maia-pills-row">
-                  {[1100, 1300, 1500, 1700, 1900].map((r) => (
-                    <button
-                      key={r}
-                      className={`elo-pill ${rating === r ? "active" : ""}`}
-                      onClick={() => {
-                        setRating(r);
-                        playSound("click");
-                        void analyzePosition(game);
-                      }}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {playMode === "max_engine" && (
-              <div className="stockfish-elo-control">
-                <div className="stockfish-label-row">
-                  <span className="rating-label">STOCKFISH ELO:</span>
-                  <span className="stockfish-rating-badge">
-                    {rating >= 2800 ? "2800+ Max GM" : `${rating} Elo`}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="800"
-                  max="2800"
-                  step="200"
-                  value={rating}
-                  onChange={(e) => {
-                    const nextRating = Number(e.target.value);
-                    setRating(nextRating);
-                    void analyzePosition(game);
-                  }}
-                  className="stockfish-rating-slider"
-                  title="Adjust Stockfish Engine Strength"
-                />
-              </div>
-            )}
-
-            {(playMode === "free_lab" || playMode === "tricky_bot") && (
-              <div className="objective-mode-pill" title="This mode operates on objective tactical analysis">
-                <span className="status-dot neutral" />
-                <span>Objective Mode — Elo N/A</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MAIN WORKSPACE CONTENT */}
       <main className="main-content">
-        {activeTab === "arena" && !isReviewingGame && (
-          <div className="play-workspace">
-            {/* Left Board Column */}
-            <div className={`board-column board-size-${boardSize}`}>
-              {/* Board HUD Strip */}
-              <BoardHud
-                sideToMove={sideToMove}
-                fen={game.fen()}
-                moveCount={history.length}
-                riskScore={
-                  analysis?.blunder_probability ??
-                  tacticalAnalysis?.overall_blunder_probability ??
-                  0
+        <div key={viewKey} className="view-enter">
+          {activeTab === "arena" && !isReviewingGame && (
+            <div className="view arena-page">
+              <ArenaView
+                boardSize={boardSize}
+                panelHead={
+                  <>
+                    <PlayToolbar
+                      playMode={playMode}
+                      rating={rating}
+                      ratingLocked={ratingLocked}
+                      onSelectMode={handleSelectMode}
+                      onSetRating={handleSetRating}
+                    />
+                    <BoardHud
+                      sideToMove={sideToMove}
+                      fen={game.fen()}
+                      moveCount={history.length}
+                      riskScore={playMode === "trap_puzzle" ? null : riskScore}
+                      isCheck={isCheck}
+                      isAnalyzing={isAnalyzing}
+                    >
+                      <OverlayControls overlays={overlays} onToggle={handleToggleOverlay} />
+                    </BoardHud>
+                    {showTerritoryHeatmap && territoryControl && <InfluencePanel territory={territoryControl} />}
+                  </>
                 }
-                isCheck={isCheck}
-              />
-
-              {/* Top Opponent Player Bar */}
-              <div className="player-strip opponent-strip">
-                <div className="player-meta-left">
-                  <div className={`player-avatar ${isOpponentTurn ? "turn-active" : ""}`}>
-                    {playMode === "max_engine" ? "⚡" : playMode === "tricky_bot" ? "🪤" : playMode === "human_sparring" ? "🧠" : "🧪"}
-                  </div>
-                  <div className="player-labels">
-                    <div className="player-name-row">
-                      <span className="player-name">{opponentName}</span>
-                      <span className="player-color-tag">{opponentColor === "w" ? "♔ White" : "♚ Black"}</span>
-                      {isOpponentTurn && !completedGameSummary && (
-                        <span className="thinking-tag">
-                          <span className="pulse-dot" />
-                          {isBotThinking ? "Thinking..." : "To move"}
-                        </span>
-                      )}
-                    </div>
-                    <div className="player-captured-row">
-                      {opponentCaptured.map((sym, i) => (
-                        <span key={i} className="captured-piece-sym">{sym}</span>
-                      ))}
-                      {opponentScoreLead > 0 && (
-                        <span className="material-lead-tag">+{opponentScoreLead}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="board-top-extras">
-                  <span className="opening-pill" title="Detected Opening Book">
-                    📖 {openingName}
-                  </span>
-                  {isCheck && sideToMove === opponentColor && (
-                    <span className="check-alert-tag">CHECK!</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Territory Control & Center Influence Bar (Milestone 2) */}
-              {showTerritoryHeatmap && territoryControl && (
-                <div className="territory-influence-panel">
-                  <div className="center-dominance-row">
-                    <span className="dom-badge white">♔ {territoryControl.center_control.white_percent}% White</span>
-                    <span className="dom-title">Central Outposts (e4 / d4 / e5 / d5)</span>
-                    <span className="dom-badge black">♚ {territoryControl.center_control.black_percent}% Black</span>
-                  </div>
-                  <div className="dominance-split-meter">
-                    <div
-                      className="split-segment white"
-                      style={{ width: `${territoryControl.center_control.white_percent}%` }}
-                      title={`White center control: ${territoryControl.center_control.white_percent}%`}
-                    />
-                    <div
-                      className="split-segment black"
-                      style={{ width: `${territoryControl.center_control.black_percent}%` }}
-                      title={`Black center control: ${territoryControl.center_control.black_percent}%`}
-                    />
-                  </div>
-                  <div className="influence-totals-row">
-                    <span><strong>♔ {territoryControl.total_influence.white_squares}</strong> Sq White</span>
-                    <span className="text-amber"><strong>{territoryControl.total_influence.contested_squares}</strong> Contested</span>
-                    <span><strong>♚ {territoryControl.total_influence.black_squares}</strong> Sq Black</span>
-                  </div>
-
-                  {/* Educational Outpost Legend */}
-                  <div className="heatmap-legend-row">
-                    <div className="legend-chip cyan">
-                      <span className="legend-dot cyan" />
-                      <span>Cyan: White Outpost</span>
-                    </div>
-                    <div className="legend-chip ruby">
-                      <span className="legend-dot ruby" />
-                      <span>Ruby: Black Outpost</span>
-                    </div>
-                    <div className="legend-chip amber">
-                      <span className="legend-dot amber" />
-                      <span>Amber: Contested Hotspot</span>
-                    </div>
-                  </div>
-                  <p className="heatmap-pedagogical-hint">
-                    Central squares and outpost anchors dictate tactical initiative. Deeply embedded outposts restrict enemy candidate moves.
-                  </p>
-                </div>
-              )}
-
-              {/* Chessboard and Vertical Evaluation Bar Container */}
-              <div className="board-wrapper">
-                <EvaluationBar
-                  evaluationCentipawns={engineEvaluation}
-                  isFlipped={isFlipped}
-                />
-                <div className="board-inner" ref={boardContainerRef}>
-                  <Chessboard
-                    position={game.fen()}
-                    boardWidth={boardWidth}
-                    onPieceDrop={onPieceDrop}
-                    onPieceDragBegin={onPieceDragBegin}
-                    onPieceDragEnd={onPieceDragEnd}
-                    onSquareClick={onSquareClick}
-                    isDraggablePiece={isDraggablePiece}
-                    boardOrientation={isFlipped ? "black" : "white"}
-                    customSquareStyles={customSquareStyles}
-                    customArrows={activeArrows}
-                    customDropSquareStyle={{
-                      boxShadow: "inset 0 0 1px 4px rgba(255, 255, 255, 0.75)",
-                    }}
-                    customBoardStyle={{
-                      borderRadius: "8px",
-                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
-                    }}
-                    customDarkSquareStyle={{ backgroundColor: "#769656" }}
-                    customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
-                    snapToCursor={false}
-                    autoPromoteToQueen={true}
-                    dropOffBoardAction="snapback"
-                    animationDuration={150}
-                  />
-                </div>
-              </div>
-
-              {/* Bottom You (Player) Strip */}
-              <div className="player-strip player-self-strip">
-                <div className="player-meta-left">
-                  <div className={`player-avatar ${isPlayerTurn ? "turn-active" : ""}`}>
-                    {playerColor === "w" ? "♔" : "♚"}
-                  </div>
-                  <div className="player-labels">
-                    <div className="player-name-row">
-                      <span className="player-name">You</span>
-                      <span className="player-color-tag">{playerColor === "w" ? "White" : "Black"}</span>
-                      {isPlayerTurn && !completedGameSummary && (
-                        <span className="your-turn-pill">
-                          <span className="pulse-dot green" /> Your Turn
-                        </span>
-                      )}
-                      {isCheck && sideToMove === playerColor && (
-                        <span className="check-alert-tag">IN CHECK!</span>
-                      )}
-                    </div>
-                    <div className="player-captured-row">
-                      {playerCaptured.map((sym, i) => (
-                        <span key={i} className="captured-piece-sym">{sym}</span>
-                      ))}
-                      {playerScoreLead > 0 && (
-                        <span className="material-lead-tag">+{playerScoreLead}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Board Size Toggle */}
-                <button
-                  className="board-size-toggle-btn"
-                  onClick={handleToggleBoardSize}
-                  title={`Board Size: ${boardSize.toUpperCase()} (Click to toggle)`}
-                >
-                  <Maximize2 size={13} />
-                  <span>{boardSize.toUpperCase()}</span>
-                </button>
-              </div>
-
-              {/* Board Control Action Toolbar */}
-              <div className="board-actions-bar">
-                <button
-                  className="action-btn"
-                  onClick={handleUndo}
-                  disabled={(game.history().length === 0 && fenHistory.length <= 1) || isBotThinking}
-                  title="Undo last move (takes back both bot & player moves in bot mode)"
-                >
-                  <Undo2 size={15} />
-                  <span>Undo</span>
-                </button>
-                <button
-                  className={`action-btn ${showTerritoryHeatmap ? "active" : ""}`}
-                  onClick={() => {
-                    playSound("click");
-                    setShowTerritoryHeatmap((prev) => !prev);
-                    showToast(
-                      showTerritoryHeatmap
-                        ? "Square Control Heatmap hidden"
-                        : "Square Control & Outposts active"
-                    );
-                  }}
-                  title="Toggle Dynamic Board Territory Heatmap & Center Dominance"
-                >
-                  <Layers size={15} />
-                  <span>
-                    {showTerritoryHeatmap
-                      ? "Outposts Heatmap On"
-                      : "Show Square Control & Outposts (Heatmap)"}
-                  </span>
-                </button>
-                <button
-                  className="action-btn hint-btn"
-                  onClick={handleRequestHint}
-                  disabled={completedGameSummary !== null || isBotThinking || isFetchingHint}
-                  title="Ask Coach/Stockfish for the best move recommendation"
-                >
-                  <Lightbulb size={15} />
-                  <span>{isFetchingHint ? "Thinking..." : "Hint"}</span>
-                </button>
-                <button
-                  className="action-btn"
-                  onClick={handleFlipBoard}
-                  title="Flip board perspective"
-                >
-                  <FlipHorizontal2 size={15} />
-                  <span>Flip</span>
-                </button>
-                <button
-                  className="action-btn"
-                  onClick={handleCopyFen}
-                  title="Copy current FEN notation"
-                >
-                  <Copy size={15} />
-                  <span>Copy FEN</span>
-                </button>
-                <button
-                  className="action-btn"
-                  onClick={() => handleDownloadPgn()}
-                  disabled={game.history().length === 0}
-                  title="Download game in PGN format"
-                >
-                  <Download size={15} />
-                  <span>PGN</span>
-                </button>
-                <button
-                  className="action-btn new-game-btn"
-                  onClick={handleNewGame}
-                  title="Reset board to starting position"
-                >
-                  <RotateCcw size={15} />
-                  <span>New Game</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Right Insight Column */}
-            <div className="insight-column">
-              <CandidateMovesCard
-                candidateMoves={tacticalAnalysis?.candidate_moves || []}
-                onHoverCandidateMove={setHoveredCandidateMove}
-                hoveredUci={hoveredCandidateMove}
-              />
-              <BlunderRiskMeter
-                analysis={analysis}
-                tacticalAnalysis={tacticalAnalysis}
-                isAnalyzing={isAnalyzing}
-                sideToMove={sideToMove}
-                isCheck={isCheck}
-                moveCount={history.length}
-                lastMoveSan={lastMove?.san}
-                rating={rating}
-                outcome={completedGameSummary}
-                coachAdvice={coachAdvice}
-                onFetchCoachAdvice={handleFetchCoachAdvice}
-                isFetchingCoachAdvice={isFetchingCoachAdvice}
-                onHoverCandidateMove={setHoveredCandidateMove}
-                onHoverThreatSquare={setHoveredThreatSquare}
-              />
-              <MoveHistory movePairs={movePairs} />
-            </div>
-          </div>
-        )}
-
-        {/* Game Review Overlay within Arena */}
-        {activeTab === "arena" && isReviewingGame && gameReport && (
-          <div className="review-workspace">
-            <div className="review-top-nav">
-              <button
-                className="secondary-btn btn-sm"
-                onClick={() => {
-                  playSound("click");
-                  setIsReviewingGame(false);
-                }}
-                title="Return to the live Tactical Arena board"
-              >
-                ← Return to Tactical Arena
-              </button>
-              <span className="review-banner-title">CAPS ACCURACY &amp; MOVE-BY-MOVE REVIEW</span>
-            </div>
-            <div className="review-main-grid">
-              <div className="review-board-wrap">
-                <div className="board-wrapper">
-                  <EvaluationBar
-                    evaluationCentipawns={
-                      gameReport.moves.find((m) => m.ply === selectedReviewPly)?.evaluation_loss_centipawns ?? null
+                topStrip={
+                  <PlayerStrip
+                    avatar={opponentAvatar}
+                    name={opponentName}
+                    color={opponentColor}
+                    isTurn={isOpponentTurn && isLive}
+                    turnLabel={playMode === "free_lab" ? "To move" : isBotThinking ? "Thinking" : "To move"}
+                    isThinking={isBotThinking}
+                    inCheck={isCheck && sideToMove === opponentColor}
+                    captured={opponentCaptured}
+                    materialLead={opponentScoreLead}
+                    trailing={
+                      <span className="pill opening-pill" title="Detected opening">
+                        📖 {openingName}
+                      </span>
                     }
-                    isFlipped={isFlipped}
                   />
-                  <div className="board-inner">
-                    <Chessboard
-                      position={reviewGame.fen()}
-                      boardWidth={boardWidth}
-                      boardOrientation={isFlipped ? "black" : "white"}
-                      customSquareStyles={reviewSquareStyles}
-                      customBoardStyle={{
-                        borderRadius: "8px",
-                        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
-                      }}
-                      customDarkSquareStyle={{ backgroundColor: "#769656" }}
-                      customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
-                      arePiecesDraggable={false}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="review-panel-wrap">
-                <GameReview
-                  gameReport={gameReport}
-                  selectedPly={selectedReviewPly}
-                  onSelectPly={handleSelectReviewPly}
-                  onUploadPgn={handleUploadPgn}
-                  isUploading={isUploading}
-                  onDownloadPracticePositions={handleDownloadPracticeFens}
-                />
-              </div>
+                }
+                board={
+                  <ArenaBoard
+                    fen={game.fen()}
+                    boardWidth={boardWidth}
+                    boardRef={boardContainerRef}
+                    isFlipped={isFlipped}
+                    evaluationCentipawns={engineEvaluation}
+                    turn={isLive ? sideToMove : undefined}
+                    isCheck={isCheck}
+                    squareStyles={customSquareStyles}
+                    arrows={activeArrows}
+                    interactive={{ onPieceDrop, onPieceDragBegin, onPieceDragEnd, onSquareClick, isDraggablePiece }}
+                  />
+                }
+                bottomStrip={
+                  <PlayerStrip
+                    avatar={playerColor === "w" ? "♔" : "♚"}
+                    name="You"
+                    color={playerColor}
+                    isTurn={isPlayerTurn && isLive}
+                    turnLabel="Your turn"
+                    inCheck={isCheck && sideToMove === playerColor}
+                    captured={playerCaptured}
+                    materialLead={playerScoreLead}
+                  />
+                }
+                controls={
+                  <BoardControls
+                    canUndo={playMode !== "trap_puzzle" && !(history.length === 0 && fenHistory.length <= 1) && !isBotThinking}
+                    canHint={isLive && !isBotThinking && !isFetchingHint}
+                    isFetchingHint={isFetchingHint}
+                    hasMoves={history.length > 0}
+                    boardSize={boardSize}
+                    onUndo={handleUndo}
+                    onHint={playMode === "trap_puzzle" ? handlePuzzleHint : handleRequestHint}
+                    onFlip={handleFlipBoard}
+                    onCopyFen={handleCopyFen}
+                    onDownloadPgn={() => handleDownloadPgn()}
+                    onToggleBoardSize={handleToggleBoardSize}
+                    onNewGame={handleNewGame}
+                    newGameLabel={playMode === "trap_puzzle" ? "Restart" : "New game"}
+                  />
+                }
+                sidebar={playMode === "trap_puzzle" ? [
+                  <PuzzleCard
+                    key="puzzle"
+                    puzzle={activePuzzle}
+                    index={puzzleIndex}
+                    total={puzzles.length}
+                    step={puzzleStep}
+                    solveLength={activePuzzle ? puzzleSolveLength(activePuzzle) : 0}
+                    status={puzzleStatus}
+                    solvedCount={puzzleSolved.size}
+                    onHint={handlePuzzleHint}
+                    onReveal={handlePuzzleReveal}
+                    onRetry={() => loadPuzzle(puzzleIndex)}
+                    onPrev={() => loadPuzzle(puzzleIndex - 1)}
+                    onNext={() => loadPuzzle(puzzleIndex + 1)}
+                  />,
+                  <MoveHistory key="history" movePairs={movePairs} />,
+                ] : [
+                  <OutlookCard
+                    key="outlook"
+                    winChances={tacticalAnalysis?.win_chances}
+                    isCheck={isCheck}
+                    moveCount={history.length}
+                    riskScore={riskScore}
+                    lastMoveSan={lastMove?.san}
+                    outcome={completedGameSummary}
+                  />,
+                  <CandidateMovesCard
+                    key="candidates"
+                    candidateMoves={tacticalAnalysis?.candidate_moves ?? []}
+                    sideToMove={(tacticalAnalysis?.side_to_move ?? "White") === "White" ? "w" : "b"}
+                    isLoading={isAnalyzing}
+                    onHoverCandidateMove={setHoveredCandidateMove}
+                    hoveredUci={hoveredCandidateMove}
+                  />,
+                  <CoachCard
+                    key="coach"
+                    coachAdvice={coachAdvice}
+                    fallbackText={tacticalAnalysis?.coach_explanation ?? riskFor(riskScore).description}
+                    onFetchCoachAdvice={handleFetchCoachAdvice}
+                    isFetchingCoachAdvice={isFetchingCoachAdvice}
+                    disabled={!isLive}
+                  />,
+                  <ThreatRadarCard
+                    key="threats"
+                    threats={threats}
+                    sideToMove={sideToMove}
+                    onHoverThreatSquare={setHoveredThreatSquare}
+                  />,
+                  <MoveHistory key="history" movePairs={movePairs} />,
+                ]}
+              />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Tab 2: Trap Dojo */}
-        {activeTab === "trap_dojo" && (
-          <TrapDrillMode apiUrl={API_URL} />
-        )}
-
-        {/* Tab 3: Personal Blunder DNA Behavioral Profiler */}
-        {activeTab === "blunder_dna" && (
-          <BlunderDnaProfiler
-            savedGames={savedGames}
-            apiUrl={API_URL}
-            onNavigateAcademy={(leakKey) => {
-              if (leakKey === "pins") setAcademyPillar("middlegame");
-              else if (leakKey === "hanging_pieces") setAcademyPillar("opening");
-              else if (leakKey === "overloaded_defenders") setAcademyPillar("defense");
-              else if (leakKey === "back_rank") setAcademyPillar("defense");
-              else if (leakKey === "time_scramble") setAcademyPillar("endgame");
-              else if (leakKey === "pawn_structure") setAcademyPillar("opening");
-              else setAcademyPillar("all");
-              setActiveTab("academy");
-            }}
-          />
-        )}
-
-        {/* Tab 4: Chess Academy */}
-        {activeTab === "academy" && (
-          <ChessAcademy
-            initialPillar={academyPillar}
-            onPracticePosition={(fen, title) => {
-              moveRequestIdRef.current++;
-              analysisRequestIdRef.current++;
-              const loaded = new Chess();
-              try {
-                loaded.load(fen);
-                setGame(loaded);
-                setFenHistory([loaded.fen()]);
-                setPlayMode("free_lab");
+          {activeTab === "arena" && isReviewingGame && gameReport && (
+            <ReviewWorkspace
+              gameReport={gameReport}
+              reviewFen={reviewGame.fen()}
+              boardWidth={boardWidth}
+              boardRef={boardContainerRef}
+              boardSize={boardSize}
+              isFlipped={isFlipped}
+              squareStyles={reviewSquareStyles}
+              selectedPly={selectedReviewPly}
+              isUploading={isUploading}
+              onSelectPly={handleSelectReviewPly}
+              onUploadPgn={handleUploadPgn}
+              onDownloadPracticePositions={handleDownloadPracticeFens}
+              onExit={() => {
+                playSound("click");
                 setIsReviewingGame(false);
-                setCompletedGameSummary(null);
-                setSelectedSquare(null);
-                setOptionSquares({});
-                setHintArrow([]);
-                setCoachAdvice(null);
-                setHoveredCandidateMove(null);
-                setHoveredThreatSquare(null);
-                setSelectedReviewPly(null);
-                setError(null);
-                setIsFlipped(loaded.turn() === "b");
-                setActiveTab("arena");
-                showToast(`Loaded "${title}" in Free Lab`);
-                void analyzePosition(loaded);
-              } catch {
-                showToast("Could not load academy position");
-              }
-            }}
-          />
-        )}
+              }}
+            />
+          )}
 
-        {/* Tab 5: Settings & Archive */}
-        {activeTab === "settings" && (
-          <SettingsTab
-            soundEnabled={soundActive}
-            onToggleSound={handleToggleSound}
-            boardSize={boardSize}
-            onChangeBoardSize={(sz) => {
-              setBoardSize(sz);
-              localStorage.setItem("chesswise.board-size", sz);
-              showToast(`Board scale: ${sz.charAt(0).toUpperCase() + sz.slice(1)}`);
-            }}
-            savedGames={savedGames}
-            onLoadGame={(g) => {
-              moveRequestIdRef.current++;
-              analysisRequestIdRef.current++;
-              const loaded = new Chess();
-              try {
-                loaded.loadPgn(g.pgn);
-                setGame(loaded);
-                setFenHistory([loaded.fen()]);
-                setIsReviewingGame(false);
-                setCompletedGameSummary(null);
-                setSelectedSquare(null);
-                setOptionSquares({});
-                setHintArrow([]);
-                setCoachAdvice(null);
-                setHoveredCandidateMove(null);
-                setHoveredThreatSquare(null);
-                setSelectedReviewPly(null);
-                setError(null);
+          {activeTab === "trap_dojo" && <TrapDrillMode apiUrl={API_URL} />}
+
+          {activeTab === "blunder_dna" && (
+            <BlunderDnaProfiler
+              savedGames={savedGames}
+              apiUrl={API_URL}
+              onNavigateAcademy={handleNavigateAcademy}
+              onPracticePuzzles={() => {
                 setActiveTab("arena");
-                showToast("Match loaded into Tactical Arena");
-                void analyzePosition(loaded);
-              } catch {
-                showToast("Could not parse saved match PGN");
-              }
-            }}
-            onReviewGame={(g) => handleReviewPgn(g.pgn)}
-            onDownloadPgn={(g) => handleDownloadPgn(g.pgn)}
-            onDeleteGame={(id) => {
-              setSavedGames((prev) => prev.filter((g) => g.id !== id));
-              showToast("Match removed from archive");
-            }}
-            onClearAllGames={() => {
-              if (window.confirm("Are you sure you want to clear your local match history?")) {
-                setSavedGames([]);
-                showToast("Archive cleared");
-              }
-            }}
-            modelHealth={modelHealth}
-          />
-        )}
+                setIsReviewingGame(false);
+                handleSelectMode("trap_puzzle");
+              }}
+            />
+          )}
+
+          {activeTab === "academy" && (
+            <ChessAcademy initialPillar={academyPillar} onPracticePosition={handlePracticePosition} />
+          )}
+
+          {activeTab === "settings" && (
+            <SettingsTab
+              soundEnabled={soundActive}
+              onToggleSound={handleToggleSound}
+              boardSize={boardSize}
+              onChangeBoardSize={(sz) => {
+                setBoardSize(sz);
+                localStorage.setItem("chesswise.board-size", sz);
+                showToast(`Board size: ${sz}`);
+              }}
+              savedGames={savedGames}
+              onLoadGame={handleLoadSavedGame}
+              onReviewGame={(g) => handleReviewPgn(g.pgn)}
+              onDownloadPgn={(g) => handleDownloadPgn(g.pgn)}
+              onDeleteGame={(id) => {
+                setSavedGames((prev) => prev.filter((g) => g.id !== id));
+                showToast("Match removed from archive");
+              }}
+              onClearAllGames={() => setConfirmClear(true)}
+              modelHealth={modelHealth}
+              theme={appearance.theme}
+              onChangeTheme={appearance.setTheme}
+              boardTheme={appearance.board}
+              onChangeBoardTheme={appearance.setBoard}
+            />
+          )}
+        </div>
       </main>
 
-      {/* Settings Modal */}
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -1533,9 +1497,18 @@ export default function App() {
         onToggleSound={handleToggleSound}
         savedGamesCount={savedGames.length}
         onClearSavedGames={() => {
-          setSavedGames([]);
-          showToast("Local game history cleared");
+          setShowSettings(false);
+          setConfirmClear(true);
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Clear the whole archive?"
+        message={`This permanently deletes all ${savedGames.length} saved matches from this browser. It can't be undone.`}
+        confirmLabel="Delete all matches"
+        onConfirm={clearArchive}
+        onCancel={() => setConfirmClear(false)}
       />
     </div>
   );

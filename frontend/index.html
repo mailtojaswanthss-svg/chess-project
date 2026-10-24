@@ -3,8 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b121b" />
-    <title>Chesswise — Blunder Coach</title>
+    <meta name="theme-color" content="#f4f6f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121514" media="(prefers-color-scheme: dark)" />
+    <script>
+      // Apply the saved theme and board colours before first paint (no flash of the wrong theme)
+      try {
+        var t = localStorage.getItem("chesswise.theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        var b = localStorage.getItem("chesswise.board-theme");
+        if (b === "walnut" || b === "ocean") document.documentElement.setAttribute("data-board", b);
+      } catch (e) {}
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>ChessWise AI</title>
   </head>
   <body>
     <div id="root"></div>

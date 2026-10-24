@@ -1,0 +1,208 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* ==========================================================================
+   Modern slate. Neutral graphite / near-white chrome; the board's green is
+   the only accent so the board stays the hero. Light values live on :root,
+   dark values apply via the OS setting (unless the user chose light) or an
+   explicit data-theme="dark".
+   ========================================================================== */
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --surface-0: #f4f6f4;
+  --surface-1: #ffffff;
+  --surface-2: #eef1ee;
+  --surface-3: #e1e6e2;
+  --surface-solid: #ffffff;
+  --border: #dde2de;
+  --border-strong: #c7cec9;
+  /* Foreground as an RGB triple, for translucent tints: rgb(var(--fg-rgb) / 0.08) */
+  --fg-rgb: 28 36 32;
+
+  /* Text */
+  --text-1: #1c2420;
+  --text-2: #3e4944;
+  --text-3: #5d6863;
+
+  /* Accent: board green */
+  --accent: #5e8c3a;
+  --accent-strong: #4e7a2e;
+  --accent-text: #46722a;
+  --accent-soft: rgba(94, 140, 58, 0.12);
+  --accent-ring: rgba(94, 140, 58, 0.45);
+  --on-accent: #ffffff;
+  --cream: #eeeed2;
+  --cream-soft: rgba(94, 140, 58, 0.08);
+
+  /* State colours (never decoration) */
+  --good: #2f8f55;
+  --good-soft: rgba(47, 143, 85, 0.12);
+  --good-text: #23784a;
+  --warn: #b7791f;
+  --warn-soft: rgba(183, 121, 31, 0.13);
+  --warn-text: #8f5e14;
+  --danger: #c8483b;
+  --danger-soft: rgba(200, 72, 59, 0.11);
+  --danger-text: #a63428;
+  --violet: #7458c4;
+  --violet-soft: rgba(116, 88, 196, 0.12);
+  --gold: #a57c1b;
+
+  /* Board (overridden by data-board on <html>) */
+  --board-light: #eeeed2;
+  --board-dark: #769656;
+  --piece-white: #f6f7f6;
+  --piece-black: #1c2420;
+
+  --shadow-card: 0 1px 2px rgba(20, 30, 25, 0.06), 0 8px 24px -16px rgba(20, 30, 25, 0.18);
+  --shadow-lift: 0 2px 4px rgba(20, 30, 25, 0.06), 0 16px 32px -16px rgba(20, 30, 25, 0.28);
+  --shadow-board: 0 2px 6px rgba(20, 30, 25, 0.1), 0 24px 48px -24px rgba(20, 30, 25, 0.45);
+  --header-bg: rgba(244, 246, 244, 0.85);
+  --backdrop: rgba(28, 36, 32, 0.35);
+
+  /* Legacy aliases kept for the migrated component sheets */
+  --bg-primary: var(--surface-0);
+  --bg-secondary: var(--surface-solid);
+  --bg-card: var(--surface-1);
+  --bg-card-hover: var(--surface-2);
+  --border-subtle: var(--border);
+  --border-accent: var(--accent-ring);
+  --accent-cyan: var(--accent);
+  --accent-blue: var(--accent);
+  --accent-emerald: var(--good);
+  --accent-lime: var(--good);
+  --accent-amber: var(--warn);
+  --accent-red: var(--danger);
+  --text-primary: var(--text-1);
+  --text-secondary: var(--text-2);
+  --text-muted: var(--text-3);
+  --radius-md: 10px;
+
+  /* Type: Bricolage for headings, Figtree for reading, JetBrains Mono for notation */
+  --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --font-sans: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-display);
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --text-page: 1.75rem;
+  --text-card: 1.05rem;
+  --text-body: 0.9375rem;
+  --text-small: 0.8125rem;
+  --text-label: 0.75rem;
+  --leading-body: 1.55;
+
+  /* Space, shape */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --card-pad: 16px 20px;
+  --card-gap: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 150ms;
+  --dur-med: 280ms;
+  --dur-slow: 600ms;
+}
+
+/* Dark graphite. Same tokens, redefined. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #121514;
+    --surface-1: #1b1f1d;
+    --surface-2: #232826;
+    --surface-3: #2e3431;
+    --surface-solid: #1b1f1d;
+    --border: #2a302d;
+    --border-strong: #3a423e;
+    --fg-rgb: 238 242 239;
+    --text-1: #eef2ef;
+    --text-2: #c3cbc6;
+    --text-3: #8b958f;
+    --accent: #8dbb5a;
+    --accent-strong: #76a048;
+    --accent-text: #9fca6d;
+    --accent-soft: rgba(141, 187, 90, 0.14);
+    --accent-ring: rgba(141, 187, 90, 0.45);
+    --on-accent: #142010;
+    --cream-soft: rgba(141, 187, 90, 0.08);
+    --good: #5fd08a;
+    --good-soft: rgba(95, 208, 138, 0.13);
+    --good-text: #7fdca2;
+    --warn: #e8b44c;
+    --warn-soft: rgba(232, 180, 76, 0.14);
+    --warn-text: #f0c873;
+    --danger: #e5675a;
+    --danger-soft: rgba(229, 103, 90, 0.14);
+    --danger-text: #f19a90;
+    --violet: #b49ce6;
+    --violet-soft: rgba(180, 156, 230, 0.14);
+    --gold: #e7c66b;
+    --piece-black: #0e110f;
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px -18px rgba(0, 0, 0, 0.8);
+    --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 40px -16px rgba(0, 0, 0, 0.85);
+    --shadow-board: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 24px 56px -24px rgba(0, 0, 0, 0.9);
+    --header-bg: rgba(18, 21, 20, 0.82);
+    --backdrop: rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121514;
+  --surface-1: #1b1f1d;
+  --surface-2: #232826;
+  --surface-3: #2e3431;
+  --surface-solid: #1b1f1d;
+  --border: #2a302d;
+  --border-strong: #3a423e;
+  --fg-rgb: 238 242 239;
+  --text-1: #eef2ef;
+  --text-2: #c3cbc6;
+  --text-3: #8b958f;
+  --accent: #8dbb5a;
+  --accent-strong: #76a048;
+  --accent-text: #9fca6d;
+  --accent-soft: rgba(141, 187, 90, 0.14);
+  --accent-ring: rgba(141, 187, 90, 0.45);
+  --on-accent: #142010;
+  --cream-soft: rgba(141, 187, 90, 0.08);
+  --good: #5fd08a;
+  --good-soft: rgba(95, 208, 138, 0.13);
+  --good-text: #7fdca2;
+  --warn: #e8b44c;
+  --warn-soft: rgba(232, 180, 76, 0.14);
+  --warn-text: #f0c873;
+  --danger: #e5675a;
+  --danger-soft: rgba(229, 103, 90, 0.14);
+  --danger-text: #f19a90;
+  --violet: #b49ce6;
+  --violet-soft: rgba(180, 156, 230, 0.14);
+  --gold: #e7c66b;
+  --piece-black: #0e110f;
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px -18px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 40px -16px rgba(0, 0, 0, 0.85);
+  --shadow-board: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 24px 56px -24px rgba(0, 0, 0, 0.9);
+  --header-bg: rgba(18, 21, 20, 0.82);
+  --backdrop: rgba(0, 0, 0, 0.6);
+}
+
+/* Board colour sets, chosen in Games & Settings */
+:root[data-board="walnut"] {
+  --board-light: #f0d9b5;
+  --board-dark: #b58863;
+}
+
+:root[data-board="ocean"] {
+  --board-light: #dee3e6;
+  --board-dark: #8ca2ad;
+}

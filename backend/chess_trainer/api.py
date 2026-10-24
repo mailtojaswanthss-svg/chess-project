@@ -639,24 +639,22 @@ def coach_advice(req: CoachAdviceRequest) -> CoachExplanation:
                             CandidateMove(
                                 uci=move.uci(),
                                 san=board.san(move),
-                                evaluation_centipawns=score,
+                                centipawns=score,
                                 loss_centipawns=loss,
                                 classification="best" if loss == 0 else "good" if loss <= 35 else "mistake",
-                                win_probability=1.0 / (1.0 + math.pow(10, -score / 400.0)),
                                 blunder_probability=0.15,
                             )
                         )
-        except Exception:
-            pass
+        except (OSError, EngineConfigurationError) as exc:
+            logger.warning("Coach advice continuing without engine candidates: %s", exc)
 
     overall_prob = 0.15
-    model = get_blunder_model()
-    if model is not None:
+    if settings.model_path.exists():
         try:
-            feats = extract_features(board, rating=req.rating)
-            overall_prob = float(model.predict_proba([feats])[0][1])
-        except Exception:
-            pass
+            model = get_blunder_model()
+            overall_prob = model.predict_probability(extract_features(board, req.rating))
+        except HTTPException as exc:
+            logger.warning("Coach advice continuing without blunder model: %s", exc.detail)
 
     ctx = build_tactical_context(
         board=board,

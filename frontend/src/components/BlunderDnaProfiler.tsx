@@ -58,6 +58,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedAxis, setSelectedAxis] = useState<string | null>(null);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
 
   const fetchProfile = async (pgnTexts?: string[]) => {
     setIsLoading(true);
@@ -70,8 +71,10 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
       if (resp.ok) {
         const data = (await resp.json()) as BlunderDnaReport;
         setProfile(data);
+        setIsOffline(false);
       }
     } catch {
+      setIsOffline(true);
       // Fallback baseline if server unreached
       setProfile({
         dimensions: {
@@ -93,8 +96,8 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
           training_prescription: "Implement a disciplined LPDO (Loose Pieces Drop Off) scan before committing to forward thrusts.",
         },
         resilience_score: 72,
-        games_analyzed: savedGames.length,
-        blunders_detected: savedGames.length * 2,
+        games_analyzed: 0,
+        blunders_detected: 0,
         critical_advice: [
           "Scan all unprotected pieces ('LPDO') before selecting a candidate move.",
           "Ensure your king has an escape square before committing heavy pieces to the attack.",
@@ -260,6 +263,11 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
             <Brain size={16} className="text-cyan" />
             <span>NEURAL BEHAVIORAL PROFILER</span>
           </div>
+          {isOffline && !activePreset && (
+            <div className="dna-badge-pill" role="status">
+              <span>API offline: sample profile, not your games</span>
+            </div>
+          )}
           {profile && (
             <div
               className="archetype-hero-badge"

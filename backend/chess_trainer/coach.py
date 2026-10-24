@@ -8,11 +8,14 @@ into explainable pedagogical coaching advice.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any, List, Optional
 import chess
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class TacticalContext(BaseModel):
@@ -115,9 +118,11 @@ def generate_agentic_coach_advice(
     if key and key.strip():
         try:
             return _call_gemini_coach(ctx, key.strip())
-        except Exception:
-            # Resilient fallback to deterministic Grandmaster Agent
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Gemini coach failed (%s); falling back to deterministic coach",
+                type(exc).__name__,
+            )
 
     return _generate_deterministic_grandmaster_advice(ctx)
 
@@ -159,7 +164,7 @@ Respond in EXACT JSON with keys:
 
     last_error: Exception | None = None
     for model_id in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -169,7 +174,7 @@ Respond in EXACT JSON with keys:
         }
 
         try:
-            resp = httpx.post(url, json=payload, timeout=8.0)
+            resp = httpx.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=8.0)
             resp.raise_for_status()
             data = resp.json()
             raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -186,6 +191,7 @@ Respond in EXACT JSON with keys:
                 engine_source=f"Gemini {model_id} LLM",
             )
         except Exception as exc:
+            logger.warning("Gemini model %s failed: %s", model_id, type(exc).__name__)
             last_error = exc
             continue
 
@@ -227,7 +233,7 @@ def _generate_deterministic_grandmaster_advice(ctx: TacticalContext) -> CoachExp
         )
 
     # 2. Pin Motif Detected
-    if "pin" in ctx.motifs:
+    if "pin" in ctx.motifs or "pinned" in ctx.motifs:
         pin_threat = next((t for t in ctx.threat_descriptions if "pin" in t.lower()), "Pinned piece restricts movement")
         return CoachExplanation(
             headline="Tactical Pin Restriction: Defensive piece is immobilized",

@@ -1,6 +1,73 @@
+import chess
+import numpy as np
+import pytest
 from fastapi.testclient import TestClient
 
+from chess_trainer import api
 from chess_trainer.api import app
+from chess_trainer.config import settings
+from chess_trainer.model import BlunderModel
+
+
+class FakeClassifier:
+    def __init__(self, probability: float = 0.2):
+        self.probability = probability
+
+    def predict_proba(self, features):
+        return np.array([[1.0 - self.probability, self.probability]])
+
+
+class FakeEvaluator:
+    """Stands in for Stockfish: always prefers e4, then d4, then Nf3."""
+
+    def __init__(self, path, depth=12):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return None
+
+    def score(self, board):
+        return 0
+
+    def best_move(self, board):
+        return next(iter(board.legal_moves)), 0
+
+    def candidate_moves(self, board, count=5):
+        preferred = [chess.Move.from_uci(uci) for uci in ("e2e4", "d2d4", "g1f3")]
+        moves = [m for m in preferred if m in board.legal_moves] or list(board.legal_moves)
+        return [(move, 30 - 10 * index) for index, move in enumerate(moves[:count])]
+
+
+@pytest.fixture
+def no_backends(monkeypatch, tmp_path):
+    """No trained model and no Stockfish, as on a fresh clone."""
+    monkeypatch.setattr(settings, "model_path", tmp_path / "missing.joblib")
+    monkeypatch.setattr(settings, "stockfish_path", None)
+    monkeypatch.setattr(api, "_model_instance", None)
+
+
+def _install_fake_backends(monkeypatch, tmp_path, probability):
+    model_file = tmp_path / "model.joblib"
+    model_file.touch()
+    engine_file = tmp_path / "stockfish"
+    engine_file.touch()
+    monkeypatch.setattr(settings, "model_path", model_file)
+    monkeypatch.setattr(settings, "stockfish_path", engine_file)
+    monkeypatch.setattr(api, "get_blunder_model", lambda: BlunderModel(FakeClassifier(probability)))
+    monkeypatch.setattr(api, "StockfishEvaluator", FakeEvaluator)
+
+
+@pytest.fixture
+def fake_backends(monkeypatch, tmp_path):
+    _install_fake_backends(monkeypatch, tmp_path, probability=0.2)
+
+
+@pytest.fixture
+def risky_fake_backends(monkeypatch, tmp_path):
+    _install_fake_backends(monkeypatch, tmp_path, probability=0.9)
 
 
 def test_health_endpoint():
@@ -92,7 +159,7 @@ def test_blunder_dna_with_multi_game_pgn():
     assert "resilience_score" in data
 
 
-def test_analyze_game_returns_caps_and_badges():
+def test_analyze_game_returns_caps_and_badges(fake_backends):
     client = TestClient(app)
     pgn_text = "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 *"
     response = client.post("/analyze-game", json={"pgn_text": pgn_text, "rating": 1200})
@@ -178,7 +245,7 @@ def test_tactical_analysis_pin_threat_accuracy():
 
 
 
-def test_coach_advice_endpoint():
+def test_coach_advice_endpoint(fake_backends):
     client = TestClient(app)
     fen = "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/3P1N2/PPP2PPP/RNBQ1RK1 b kq - 0 5"
     resp = client.post(
@@ -199,3 +266,29 @@ def test_coach_advice_rejects_invalid_fen():
     client = TestClient(app)
     resp = client.post("/coach-advice", json={"fen": "invalid_fen_string", "rating": 1200})
     assert resp.status_code == 422
+
+
+def test_coach_advice_works_without_model_or_engine(no_backends):
+    resp = TestClient(app).post("/coach-advice", json={"fen": chess.STARTING_FEN, "rating": 1200})
+    assert resp.status_code == 200
+    assert resp.json()["headline"]
+
+
+def test_coach_advice_recommends_engine_top_move(fake_backends):
+    resp = TestClient(app).post("/coach-advice", json={"fen": chess.STARTING_FEN, "rating": 1200})
+    assert resp.status_code == 200
+    assert resp.json()["recommended_move"].startswith("e4")
+
+
+def test_coach_advice_uses_model_blunder_probability(risky_fake_backends):
+    resp = TestClient(app).post("/coach-advice", json={"fen": chess.STARTING_FEN, "rating": 1200})
+    assert resp.status_code == 200
+    assert "High Blunder Danger" in resp.json()["headline"]
+
+
+def test_coach_advice_explains_detected_pin(no_backends):
+    # Black knight on c6 is pinned to the king by the bishop on b5
+    pin_fen = "r1bqkbnr/ppp2ppp/2n5/1B1pp3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 4"
+    resp = TestClient(app).post("/coach-advice", json={"fen": pin_fen, "rating": 1200})
+    assert resp.status_code == 200
+    assert "pin" in resp.json()["tactical_tags"]

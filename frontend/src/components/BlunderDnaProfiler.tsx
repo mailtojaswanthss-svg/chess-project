@@ -1,17 +1,7 @@
+import "./BlunderDnaProfiler.css";
 import React, { useState, useEffect } from "react";
-import {
-  Brain,
-  Crosshair,
-  TrendingUp,
-  Sparkles,
-  RefreshCw,
-  Award,
-  CheckCircle2,
-  AlertOctagon,
-  Flame,
-  ArrowRight,
-  GraduationCap,
-} from "lucide-react";
+import { Crosshair, Sparkles, RefreshCw, Flame, GraduationCap, ShieldCheck, AlertOctagon } from "lucide-react";
+import { useCountUp } from "../utils/useCountUp";
 import type { BlunderDnaReport, BlunderDnaDimensions, SavedGame } from "../types/chess";
 import { playSound } from "../utils/audio";
 
@@ -172,8 +162,8 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
             : "Refine nuanced minority attacks and bishop vs knight endgames.",
       },
       resilience_score: resilience,
-      games_analyzed: 42,
-      blunders_detected: Math.round(avg * 0.8),
+      games_analyzed: 0,
+      blunders_detected: 0,
       critical_advice: [
         "Proactively reinforce threatened anchor pieces before advancing.",
         "Verify your King escape corridor before exchanging queens.",
@@ -254,342 +244,252 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
   // Top 3 tactical leaks for "Fix Your Leaks" cards
   const topLeaks = [...axes].sort((a, b) => b.value - a.value).slice(0, 3);
 
+  const severity = (v: number) => (v >= 60 ? "high" : v >= 35 ? "medium" : "low");
+  const rankedLeaks = [...axes].sort((a, b) => b.value - a.value);
+  const resilience = Math.round(useCountUp(profile?.resilience_score ?? 0, 900));
+  const accent = profile?.archetype.badge_color ?? "var(--accent)";
+  const selected = selectedAxis ? axes.find((a) => a.key === selectedAxis) : undefined;
+  const sourceLabel = activePreset
+    ? "Example profile"
+    : isOffline
+    ? "API offline: sample profile, not your games"
+    : `From ${savedGames.length} archived ${savedGames.length === 1 ? "game" : "games"}`;
+
   return (
-    <div className="blunder-dna-container">
-      {/* 1. Archetype Hero Banner with High Contrast */}
-      <div className="dna-hero-header">
-        <div className="dna-hero-top-row">
-          <div className="dna-badge-pill">
-            <Brain size={16} className="text-cyan" />
-            <span>NEURAL BEHAVIORAL PROFILER</span>
-          </div>
-          {isOffline && !activePreset && (
-            <div className="dna-badge-pill" role="status">
-              <span>API offline: sample profile, not your games</span>
-            </div>
-          )}
-          {profile && (
-            <div
-              className="archetype-hero-badge"
-              style={{ borderColor: profile.archetype.badge_color, color: profile.archetype.badge_color }}
-            >
-              ★ {profile.archetype.name.toUpperCase()}
-            </div>
-          )}
+    <div className="view dna">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Tactical DNA</h1>
+          <p className="page-sub">Six recurring weakness patterns from your games, and the drills that fix them.</p>
         </div>
+        <span className={`pill ${isOffline && !activePreset ? "pill--warn" : activePreset ? "pill--violet" : "pill--accent"}`} role="status">
+          {sourceLabel}
+        </span>
+      </div>
 
-        <h2 className="dna-hero-title">Personal &quot;Tactical DNA&quot; Radar</h2>
-        <p className="dna-hero-summary">
-          {profile?.archetype.quote ||
-            "Deep psychological and tactical archetype diagnostics measuring recurring error vectors across 6 core vulnerability dimensions."}
-        </p>
-
-        {/* Preset Selector */}
-        <div className="dna-archetype-chips">
-          <span className="chips-label">Explore Archetypes:</span>
-          {Object.entries(PRESET_ARCHETYPES).map(([key, data]) => (
-            <button
-              key={key}
-              className={`archetype-chip ${activePreset === key ? "active" : ""}`}
-              onClick={() => loadPreset(key)}
-            >
-              {data.name}
-            </button>
-          ))}
+      <div className="dna-presets" role="group" aria-label="Profile source">
+        <button
+          className={`btn btn--sm ${activePreset === null ? "is-active" : ""}`}
+          onClick={() => {
+            playSound("click");
+            setActivePreset(null);
+            fetchProfile(savedGames.map((g) => g.pgn).filter(Boolean));
+          }}
+        >
+          <RefreshCw size={13} /> My games <span className="num">({savedGames.length})</span>
+        </button>
+        <span className="dna-presets__divider" aria-hidden="true" />
+        <span className="dna-presets__label">Examples</span>
+        {Object.entries(PRESET_ARCHETYPES).map(([key, data]) => (
           <button
-            className="archetype-chip reset"
-            onClick={() => {
-              setActivePreset(null);
-              fetchProfile(savedGames.map((g) => g.pgn).filter(Boolean));
-            }}
-            title="Reset to your personal games"
+            key={key}
+            className={`btn btn--sm btn--ghost ${activePreset === key ? "is-active" : ""}`}
+            onClick={() => loadPreset(key)}
           >
-            <RefreshCw size={12} style={{ marginRight: 4 }} /> My Games ({savedGames.length})
+            {data.name.replace(/^The /, "")}
           </button>
-        </div>
+        ))}
       </div>
 
-      {/* 2. Main Grid: Centerpiece Radar on Left, Archetype Dossier on Right */}
-      <div className="dna-grid">
-        {/* Left: SVG Radar Chart */}
-        <div className="dna-card radar-card">
-          <div className="card-top-title">
-            <Crosshair size={16} className="text-cyan" />
-            <strong className="high-contrast-heading">TACTICAL VULNERABILITY RADAR</strong>
-            <span className="info-hint">Click any axis to inspect</span>
-          </div>
-
-          <div className="radar-svg-wrapper">
-            <svg viewBox="0 0 360 330" className="radar-svg">
-              {/* Concentric Guide Webs */}
-              {[25, 50, 75, 100].map((level) => {
-                const pts = axes.map((a) => {
-                  const pt = getPoint(a.angle, level);
-                  return `${pt.x},${pt.y}`;
-                }).join(" ");
-                return (
-                  <polygon
-                    key={level}
-                    points={pts}
-                    className="radar-grid-web"
-                    strokeDasharray={level === 100 ? undefined : "3,3"}
-                  />
-                );
-              })}
-
-              {/* Axis Spoke Lines */}
-              {axes.map((a) => {
-                const pt = getPoint(a.angle, 100);
-                return (
-                  <line
-                    key={a.key}
-                    x1={cx}
-                    y1={cy}
-                    x2={pt.x}
-                    y2={pt.y}
-                    className="radar-spoke"
-                  />
-                );
-              })}
-
-              {/* Data Polygon Fill */}
-              <polygon points={polygonPoints} className="radar-polygon-fill" />
-              <polygon points={polygonPoints} className="radar-polygon-stroke" />
-
-              {/* Data Vertices and Clickable Hit Areas */}
-              {axes.map((a) => {
-                const pt = getPoint(a.angle, a.value);
-                const isSelected = selectedAxis === a.key;
-                return (
-                  <g
-                    key={a.key}
-                    className={`radar-node-group ${isSelected ? "selected" : ""}`}
-                    onClick={() => {
-                      playSound("click");
-                      setSelectedAxis(a.key === selectedAxis ? null : a.key);
-                    }}
-                  >
-                    <circle cx={pt.x} cy={pt.y} r={isSelected ? 7 : 5} className="radar-point" />
-                    {isSelected && (
-                      <circle cx={pt.x} cy={pt.y} r={12} className="radar-point-pulse" />
-                    )}
-                  </g>
-                );
-              })}
-
-              {/* Explicit Axis Labels with High Contrast */}
-              {axes.map((a) => {
-                const labelDist = 124;
-                const rad = (a.angle * Math.PI) / 180;
-                const lx = cx + labelDist * Math.cos(rad);
-                const ly = cy + labelDist * Math.sin(rad);
-                const isSelected = selectedAxis === a.key;
-                const anchor =
-                  a.angle === -90 || a.angle === 90
-                    ? "middle"
-                    : Math.cos(rad) > 0.1
-                    ? "start"
-                    : "end";
-                return (
-                  <text
-                    key={a.key}
-                    x={lx}
-                    y={ly}
-                    className={`radar-axis-label ${isSelected ? "active" : ""}`}
-                    textAnchor={anchor}
-                    dominantBaseline="central"
-                    onClick={() => {
-                      playSound("click");
-                      setSelectedAxis(a.key === selectedAxis ? null : a.key);
-                    }}
-                  >
-                    {a.label} ({a.value}%)
-                  </text>
-                );
-              })}
-            </svg>
-          </div>
-
-          {/* Quick Axis Dimension Pills */}
-          <div className="dna-dimensions-bar">
-            {axes.map((a) => (
-              <button
-                key={a.key}
-                className={`dna-dim-pill ${selectedAxis === a.key ? "active" : ""} ${
-                  a.value >= 60 ? "danger" : a.value >= 35 ? "warning" : "safe"
-                }`}
-                onClick={() => setSelectedAxis(a.key === selectedAxis ? null : a.key)}
-              >
-                <span className="dim-name">{a.label}</span>
-                <span className="dim-val">{a.value}%</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Selected Axis Inspection Drawer */}
-          {selectedAxis && axisDetails[selectedAxis] && (
-            <div className="axis-detail-drawer">
-              <div className="axis-detail-header">
-                <AlertOctagon size={16} className="text-warning" />
-                <strong>{axes.find((a) => a.key === selectedAxis)?.label} Deep Dive</strong>
-              </div>
-              <p className="axis-detail-desc">{axisDetails[selectedAxis].desc}</p>
-              <div className="axis-detail-cure">
-                <Sparkles size={14} className="text-cyan" />
-                <span><strong>Master Prescription:</strong> {axisDetails[selectedAxis].cure}</span>
-              </div>
+      <div className="split-2">
+        {/* Left: who you are as a player */}
+        <section className="card dna-hero" style={{ "--dna-accent": accent } as React.CSSProperties} aria-label="Archetype">
+          {isLoading && !profile ? (
+            <div className="dna-hero__loading" aria-busy="true">
+              <div className="skeleton" style={{ height: 96 }} />
+              <div className="skeleton" style={{ height: 280 }} />
             </div>
-          )}
-        </div>
+          ) : (
+            <>
+              <div key={profile?.archetype.name} className="dna-identity">
+                <div
+                  className="dna-ring"
+                  style={{ "--pct": `${resilience}%` } as React.CSSProperties}
+                  role="img"
+                  aria-label={`Tactical resilience ${profile?.resilience_score ?? 0} out of 100`}
+                >
+                  <span className="dna-ring__value num">{resilience}</span>
+                  <span className="dna-ring__label">Resilience</span>
+                </div>
+                <div className="dna-identity__text">
+                  <span className="dna-identity__kicker">Your archetype</span>
+                  <h2 className="dna-identity__name">{profile?.archetype.name ?? "Unprofiled"}</h2>
+                  <p className="dna-identity__title">{profile?.archetype.title}</p>
+                  {profile?.archetype.quote && <p className="dna-identity__quote">{profile.archetype.quote}</p>}
+                </div>
+              </div>
 
-        {/* Right: Archetype Dossier & Resilience Score */}
-        <div className="dna-card dossier-card">
-          <div className="card-top-title">
-            <Award size={16} className="text-gold" />
-            <strong className="high-contrast-heading">TACTICAL ARCHETYPE PROFILE</strong>
-          </div>
+              <div className="dna-radar">
+                <svg viewBox="0 0 360 330" className="radar-svg" role="img" aria-label="Weakness radar">
+                  {[0.25, 0.5, 0.75, 1].map((scale) => (
+                    <polygon
+                      key={scale}
+                      className="radar-web"
+                      points={axes
+                        .map((a) => {
+                          const pt = getPoint(a.angle, scale * 100);
+                          return `${pt.x},${pt.y}`;
+                        })
+                        .join(" ")}
+                    />
+                  ))}
+                  {axes.map((a) => {
+                    const end = getPoint(a.angle, 100);
+                    return <line key={a.key} className="radar-spoke" x1={cx} y1={cy} x2={end.x} y2={end.y} />;
+                  })}
+                  <g key={polygonPoints} className="radar-shape">
+                    <polygon points={polygonPoints} className="radar-fill" />
+                    <polygon points={polygonPoints} className="radar-stroke" pathLength={1} />
+                  </g>
+                  {axes.map((a) => {
+                    const pt = getPoint(a.angle, a.value);
+                    const label = getPoint(a.angle, 128);
+                    const anchor = label.x < cx - 10 ? "end" : label.x > cx + 10 ? "start" : "middle";
+                    const isSelected = selectedAxis === a.key;
+                    const toggle = () => {
+                      playSound("click");
+                      setSelectedAxis(isSelected ? null : a.key);
+                    };
+                    return (
+                      <g
+                        key={a.key}
+                        className={`radar-axis radar-axis--${severity(a.value)} ${isSelected ? "is-selected" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSelected}
+                        aria-label={`${a.label}: ${a.value}%`}
+                        onClick={toggle}
+                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggle()}
+                      >
+                        <circle cx={pt.x} cy={pt.y} r={isSelected ? 7 : 5} className="radar-point" />
+                        <text x={label.x} y={label.y} textAnchor={anchor} dominantBaseline="central" className="radar-label">
+                          {a.label}
+                        </text>
+                        <text
+                          x={label.x}
+                          y={label.y + 15}
+                          textAnchor={anchor}
+                          dominantBaseline="central"
+                          className="radar-value"
+                        >
+                          {a.value}%
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <p className="dna-radar__hint">
+                  <Crosshair size={13} aria-hidden="true" /> Select an axis to see what it means
+                </p>
+              </div>
+
+              {selected && axisDetails[selected.key] && (
+                <div className="dna-axis-detail">
+                  <strong>
+                    <AlertOctagon size={15} aria-hidden="true" /> {selected.label}
+                  </strong>
+                  <p>{axisDetails[selected.key].desc}</p>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* Right: what to fix */}
+        <div className="dna-side">
+          <section className="card" aria-label="Tactical leaks">
+            <header className="card__header">
+              <h2 className="card__title">
+                <Flame size={16} /> Leaks to fix
+              </h2>
+              <span className="card__meta">Worst first</span>
+            </header>
+            <ol className="leak-list stagger">
+              {rankedLeaks.map((leak, idx) => {
+                const tone = severity(leak.value);
+                const details = axisDetails[leak.key];
+                return (
+                  <li
+                    key={leak.key}
+                    className={`leak leak--${tone} ${selectedAxis === leak.key ? "is-selected" : ""}`}
+                    style={{ "--i": idx } as React.CSSProperties}
+                  >
+                    <span className="leak__rank num">{idx + 1}</span>
+                    <div className="leak__main">
+                      <div className="leak__top">
+                        <strong className="leak__name">{leak.label}</strong>
+                        <span className="leak__value num">{leak.value}%</span>
+                      </div>
+                      <div className="meter">
+                        <div className={`meter__fill meter__fill--${tone}`} style={{ width: `${leak.value}%` }} />
+                      </div>
+                      <p className="leak__cure">{details?.cure}</p>
+                    </div>
+                    <button
+                      className="btn btn--sm leak__train"
+                      onClick={() => {
+                        playSound("click");
+                        onNavigateAcademy?.(leak.key);
+                      }}
+                      aria-label={`Train ${leak.label} in the Academy`}
+                    >
+                      <GraduationCap size={14} /> <span className="leak__train-label">Train</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
 
           {profile && (
-            <div className="archetype-body">
-              {/* Profile Card Header */}
-              <div
-                className="archetype-header-card"
-                style={{ borderLeftColor: profile.archetype.badge_color }}
-              >
-                <div className="archetype-title-row">
-                  <div>
-                    <h3 className="archetype-name" style={{ color: profile.archetype.badge_color }}>
-                      {profile.archetype.name}
-                    </h3>
-                    <span className="archetype-subtitle">{profile.archetype.title}</span>
-                  </div>
-                  <div className="resilience-meter-wrap">
-                    <div className="resilience-score-num">{profile.resilience_score}</div>
-                    <span className="resilience-label">Tactical Resilience</span>
-                  </div>
-                </div>
-                <p className="archetype-quote">&ldquo;{profile.archetype.quote}&rdquo;</p>
-              </div>
-
-              {/* Dominant Vulnerability */}
-              <div className="dossier-section">
-                <span className="dossier-sub-label">PRIMARY TACTICAL BLINDSPOT</span>
-                <div className="flaw-pill">
-                  <Flame size={15} className="text-danger" />
-                  <span>{profile.archetype.dominant_flaw}</span>
-                </div>
-              </div>
-
-              {/* Strengths & Blind Spots */}
-              <div className="dossier-dual-grid">
-                <div className="dossier-col">
-                  <span className="dossier-sub-label">CORE STRENGTHS</span>
-                  <div className="tag-list">
-                    {profile.archetype.strengths.map((str, idx) => (
-                      <div key={idx} className="tag-item strength">
-                        <CheckCircle2 size={13} /> {str}
-                      </div>
+            <section className="card" aria-label="Strengths and blind spots">
+              <div className="dna-traits">
+                <div>
+                  <h3 className="dna-traits__title dna-traits__title--good">
+                    <ShieldCheck size={15} aria-hidden="true" /> Strengths
+                  </h3>
+                  <ul className="trait-list">
+                    {profile.archetype.strengths.map((item) => (
+                      <li key={item} className="trait trait--good">{item}</li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
-                <div className="dossier-col">
-                  <span className="dossier-sub-label">VULNERABILITY LEAKS</span>
-                  <div className="tag-list">
-                    {profile.archetype.blind_spots.map((bs, idx) => (
-                      <div key={idx} className="tag-item weakness">
-                        <AlertOctagon size={13} /> {bs}
-                      </div>
+                <div>
+                  <h3 className="dna-traits__title dna-traits__title--bad">
+                    <AlertOctagon size={15} aria-hidden="true" /> Blind spots
+                  </h3>
+                  <ul className="trait-list">
+                    {profile.archetype.blind_spots.map((item) => (
+                      <li key={item} className="trait trait--bad">{item}</li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               </div>
-
-              {/* Tailored Training Prescription */}
-              <div className="dossier-section prescription-section">
-                <div className="prescription-header">
-                  <TrendingUp size={15} className="text-cyan" />
-                  <span>ACTIONABLE TRAINING PRESCRIPTION</span>
-                </div>
-                <p className="prescription-text">{profile.archetype.training_prescription}</p>
-              </div>
-
-              {/* Telemetry Footer */}
-              <div className="dossier-telemetry-row">
-                <div className="telemetry-item">
-                  <span className="telemetry-num">{profile.games_analyzed}</span>
-                  <span className="telemetry-desc">Games Evaluated</span>
-                </div>
-                <div className="telemetry-item">
-                  <span className="telemetry-num">
-                    {axes.reduce((a, b) => a + b.value, 0) / 6 < 40 ? "Low" : "Moderate"}
+              <details className="dna-prescription">
+                <summary>
+                  <Sparkles size={14} aria-hidden="true" /> Training prescription
+                </summary>
+                <p>{profile.archetype.training_prescription}</p>
+                {profile.critical_advice.length > 0 && (
+                  <ul>
+                    {profile.critical_advice.map((tip) => (
+                      <li key={tip}>{tip}</li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+              {!activePreset && !isOffline && (
+                <div className="dna-stats">
+                  <span>
+                    <span className="num">{profile.games_analyzed}</span> games analysed
                   </span>
-                  <span className="telemetry-desc">Error Volatility</span>
+                  <span>
+                    <span className="num">{profile.blunders_detected}</span> risky positions flagged
+                  </span>
                 </div>
-                <div className="telemetry-item">
-                  <span className="telemetry-num">Top 12%</span>
-                  <span className="telemetry-desc">Attacking Instinct</span>
-                </div>
-              </div>
-            </div>
+              )}
+            </section>
           )}
-        </div>
-      </div>
-
-      {/* 3. "Fix Your Leaks" Actionable Cards (Phase 4) */}
-      <div className="dna-leaks-section">
-        <div className="leaks-section-header">
-          <div className="leaks-title-wrap">
-            <Flame size={18} className="text-danger" />
-            <h3 className="leaks-title">Fix Your Primary Tactical Leaks</h3>
-          </div>
-          <span className="leaks-subtitle">Targeted drills to permanently raise your tactical resilience rating</span>
-        </div>
-
-        <div className="leaks-grid">
-          {topLeaks.map((leak, idx) => {
-            const details = axisDetails[leak.key];
-            const tone = leak.value >= 60 ? "danger" : leak.value >= 35 ? "warning" : "safe";
-
-            return (
-              <div key={leak.key} className={`leak-card ${tone}`}>
-                <div className="leak-card-top">
-                  <div className="leak-badge-wrap">
-                    <span className="leak-rank-num">#{idx + 1} Leak</span>
-                    <strong className="leak-name">{leak.label}</strong>
-                  </div>
-                  <span className={`leak-val-tag ${tone}`}>{leak.value}% Error Rate</span>
-                </div>
-
-                {/* Visual Progress Bar */}
-                <div className="leak-progress-track">
-                  <div
-                    className={`leak-progress-fill ${tone}`}
-                    style={{ width: `${Math.max(8, leak.value)}%` }}
-                  />
-                </div>
-
-                <p className="leak-desc">{details?.desc || "Recurring tactical blindspot observed in match play."}</p>
-
-                <div className="leak-prescription-row">
-                  <Sparkles size={13} className="text-cyan" />
-                  <span>{details?.cure}</span>
-                </div>
-
-                <button
-                  className="leak-train-btn"
-                  onClick={() => {
-                    playSound("click");
-                    onNavigateAcademy?.(leak.key);
-                  }}
-                  title={`Train ${leak.label} in Chess Academy`}
-                >
-                  <GraduationCap size={15} />
-                  <span>Train This Skill in Academy</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>

@@ -1,15 +1,16 @@
-import React from "react";
+import "./Header.css";
+import React, { useLayoutEffect, useRef } from "react";
 import {
-  Gauge,
   Settings2,
   Volume2,
   VolumeX,
   FlipHorizontal2,
-  BrainCircuit,
   Target,
   Dna,
   Swords,
   GraduationCap,
+  Archive,
+  type LucideIcon,
 } from "lucide-react";
 import type { AppTab, ModelHealth } from "../types/chess";
 import { playSound } from "../utils/audio";
@@ -25,6 +26,14 @@ interface HeaderProps {
   onOpenSettings: () => void;
 }
 
+const TABS: { id: AppTab; label: string; icon: LucideIcon }[] = [
+  { id: "arena", label: "Tactical Arena", icon: Swords },
+  { id: "trap_dojo", label: "Trap Dojo", icon: Target },
+  { id: "blunder_dna", label: "Tactical DNA", icon: Dna },
+  { id: "academy", label: "Chess Academy", icon: GraduationCap },
+  { id: "settings", label: "Settings & Archive", icon: Archive },
+];
+
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onTabChange,
@@ -36,6 +45,27 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
 }) => {
   const isModelActive = modelHealth?.model_loaded ?? false;
+  const navRef = useRef<HTMLElement>(null);
+
+  // Slide the active-tab indicator to the selected tab; CSS transitions the move.
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const place = () => {
+      const active = nav.querySelector<HTMLElement>(".nav-tab.is-active");
+      if (!active) return;
+      nav.style.setProperty("--ind-x", `${active.offsetLeft}px`);
+      nav.style.setProperty("--ind-w", `${active.offsetWidth}px`);
+      // Scroll only the tab strip (scrollIntoView would also scroll the page)
+      if (nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2, behavior: "smooth" });
+      }
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [activeTab]);
 
   const handleTab = (tab: AppTab) => {
     playSound("click");
@@ -44,71 +74,46 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="topbar">
-      <div className="brand" onClick={() => handleTab("arena")} style={{ cursor: "pointer" }}>
-        <div className="brand-mark">
-          <Gauge size={20} strokeWidth={2.5} />
-        </div>
-        <div className="brand-text">
-          <div className="brand-title-wrap">
-            <strong>ChessWise AI</strong>
-            <span className="brand-badge">PRE-COGNITIVE ENGINE</span>
-          </div>
-          <span className="brand-sub">Grandmaster Tactical Lab &amp; Blunder Intelligence</span>
-        </div>
-      </div>
+      <button className="brand" onClick={() => handleTab("arena")} aria-label="ChessWise AI home">
+        <span className="brand-mark" aria-hidden="true">♞</span>
+        <span className="brand-text">
+          <strong>ChessWise AI</strong>
+          <span className="brand-sub">Tactical lab &amp; blunder intelligence</span>
+        </span>
+      </button>
 
-      <nav className="main-tabs" aria-label="Main Navigation">
-        <button
-          className={`main-tab ${activeTab === "arena" ? "active" : ""}`}
-          onClick={() => handleTab("arena")}
-        >
-          <Swords size={14} style={{ marginRight: 6 }} /> Tactical Arena
-        </button>
-        <button
-          className={`main-tab ${activeTab === "trap_dojo" ? "active" : ""}`}
-          onClick={() => handleTab("trap_dojo")}
-        >
-          <Target size={14} style={{ marginRight: 6 }} /> Trap Dojo
-        </button>
-        <button
-          className={`main-tab ${activeTab === "blunder_dna" ? "active" : ""}`}
-          onClick={() => handleTab("blunder_dna")}
-        >
-          <Dna size={14} style={{ marginRight: 6 }} /> Tactical DNA
-        </button>
-        <button
-          className={`main-tab ${activeTab === "academy" ? "active" : ""}`}
-          onClick={() => handleTab("academy")}
-        >
-          <GraduationCap size={15} style={{ marginRight: 6 }} /> Chess Academy
-        </button>
-        <button
-          className={`main-tab ${activeTab === "settings" ? "active" : ""}`}
-          onClick={() => handleTab("settings")}
-        >
-          <Settings2 size={14} style={{ marginRight: 6 }} /> Settings &amp; Archive
-        </button>
+      <nav className="nav-tabs" aria-label="Main navigation" ref={navRef}>
+        <span className="nav-indicator" aria-hidden="true" />
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            className={`nav-tab ${activeTab === id ? "is-active" : ""}`}
+            aria-current={activeTab === id ? "page" : undefined}
+            aria-label={label}
+            onClick={() => handleTab(id)}
+          >
+            <Icon size={15} aria-hidden="true" />
+            <span className="nav-tab__label">{label}</span>
+          </button>
+        ))}
       </nav>
 
       <div className="topbar-actions">
-        {/* Connection status indicator */}
-        <div
-          className={`status-pill ${isModelActive ? "online" : "offline"}`}
+        <span
+          className={`engine-status ${isModelActive ? "is-online" : ""}`}
           title={
             isModelActive
-              ? `Backend Connected · ML Model active (${modelHealth?.model_train_samples?.toLocaleString() ?? 0} samples)`
-              : "Backend connecting or offline..."
+              ? `Backend connected · model trained on ${modelHealth?.model_train_samples?.toLocaleString() ?? 0} samples`
+              : "Backend offline or still connecting"
           }
         >
-          <span className="status-dot pulse" />
-          <span className="status-text">{isModelActive ? "Engine Online" : "Connecting..."}</span>
-        </div>
-
-        {/* Board Flip Quick Control */}
+          <span className="live-dot" />
+          <span className="engine-status__text">{isModelActive ? "Engine online" : "Connecting"}</span>
+        </span>
         <button
-          className="icon-action-btn"
-          aria-label="Flip Board"
-          title={`Flip board perspective (Currently ${isFlipped ? "Black" : "White"})`}
+          className="btn btn--ghost btn--icon"
+          aria-label="Flip board"
+          title={`Flip board (playing ${isFlipped ? "Black" : "White"})`}
           onClick={() => {
             playSound("click");
             onFlipBoard();
@@ -116,22 +121,18 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <FlipHorizontal2 size={17} />
         </button>
-
-        {/* Sound toggle button */}
         <button
-          className="icon-action-btn"
+          className="btn btn--ghost btn--icon"
           aria-label={soundEnabled ? "Mute sounds" : "Enable sounds"}
           title={soundEnabled ? "Mute audio cues" : "Unmute audio cues"}
           onClick={onToggleSound}
         >
           {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
         </button>
-
-        {/* Settings button */}
         <button
-          className="icon-action-btn"
-          aria-label="Engine Settings"
-          title="Engine parameters and rating options"
+          className="btn btn--ghost btn--icon"
+          aria-label="Quick settings"
+          title="Quick settings"
           onClick={() => {
             playSound("click");
             onOpenSettings();

@@ -1,3 +1,4 @@
+import "./TrapDrillMode.css";
 import React, { useState, useEffect, useRef } from "react";
 import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
@@ -256,6 +257,21 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
   const [refutationStep, setRefutationStep] = useState<number>(-1);
   const [currentMoveLabel, setCurrentMoveLabel] = useState<string | null>(null);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Size the board to its column instead of a fixed width, so it never overflows
+  const boardWrapRef = useRef<HTMLDivElement>(null);
+  const [boardWidth, setBoardWidth] = useState<number>(440);
+  useEffect(() => {
+    const el = boardWrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      if (el.clientWidth > 160) setBoardWidth(Math.floor(el.clientWidth));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Game/Score State
   const [streak, setStreak] = useState<number>(0);
@@ -573,14 +589,14 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
               <span className="difficulty-tag">{activeTrap?.difficulty} · {activeTrap?.theme}</span>
             </div>
 
-            <div className="drill-chessboard-wrap">
+            <div className="drill-chessboard-wrap" ref={boardWrapRef}>
               <Chessboard
                 position={currentBoard.fen()}
                 boardOrientation={activeTrap?.side_to_move === "Black" ? "black" : "white"}
                 arePiecesDraggable={false}
                 customArrows={customArrows}
                 customSquareStyles={customSquareStyles}
-                boardWidth={460}
+                boardWidth={boardWidth}
               />
             </div>
 

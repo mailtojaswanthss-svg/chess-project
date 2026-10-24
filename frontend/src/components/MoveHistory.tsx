@@ -1,48 +1,53 @@
+import "./MoveHistory.css";
 import React, { useEffect, useRef } from "react";
+import { ListOrdered } from "lucide-react";
 import type { MovePair } from "../types/chess";
 
 interface MoveHistoryProps {
   movePairs: MovePair[];
-  currentMoveIndex?: number;
 }
 
 export const MoveHistory: React.FC<MoveHistoryProps> = ({ movePairs }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const last = movePairs[movePairs.length - 1];
+  const lastIsBlack = Boolean(last?.black);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [movePairs]);
 
   return (
-    <div className="history-card">
-      <div className="card-header">
-        <span className="card-title">MOVE NOTATION</span>
-        <span className="card-meta">{movePairs.length ? `${movePairs.length} rounds` : "Starting"}</span>
-      </div>
+    <section className="card history" aria-label="Move list">
+      <header className="card__header">
+        <h2 className="card__title">
+          <ListOrdered size={16} /> Moves
+        </h2>
+        <span className="card__meta num">{movePairs.length ? `${movePairs.length} moves` : "Start"}</span>
+      </header>
 
-      <div className="move-table-scroll" ref={scrollRef}>
-        {movePairs.length === 0 ? (
-          <div className="empty-history-notice">
-            <span>No moves yet. Make a move on the board to start!</span>
-          </div>
-        ) : (
-          <div className="move-rows">
-            {movePairs.map((pair) => (
-              <div key={pair.number} className="move-pair-row">
-                <span className="move-number">{pair.number}.</span>
-                <span className={`move-cell white ${pair.white ? "filled" : ""}`}>
-                  {pair.white?.san ?? "-"}
-                </span>
-                <span className={`move-cell black ${pair.black ? "filled" : ""}`}>
-                  {pair.black?.san ?? ""}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {movePairs.length === 0 ? (
+        <p className="card__empty">No moves yet. Drag or click a piece to begin.</p>
+      ) : (
+        <div className="history-scroll" ref={scrollRef}>
+          <ol className="history-rows">
+            {movePairs.map((pair, idx) => {
+              const isLast = idx === movePairs.length - 1;
+              return (
+                <li key={pair.number} className="history-row">
+                  <span className="history-no num">{pair.number}.</span>
+                  <span className={`history-move num ${isLast && !lastIsBlack ? "is-current" : ""}`}>
+                    {pair.white?.san ?? "…"}
+                  </span>
+                  <span className={`history-move num ${isLast && lastIsBlack ? "is-current" : ""}`}>
+                    {pair.black?.san ?? ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+    </section>
   );
 };

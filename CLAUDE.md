@@ -18,6 +18,11 @@ Run from the repo root unless noted.
 - `tests/test_api.py::test_analyze_game_returns_caps_and_badges` and `::test_coach_advice_endpoint` return 503 without a local model or Stockfish. Report them as environment failures; don't paper over them.
 - The frontend has no test runner or linter. `npm run build` (`tsc -b` + Vite) is the check.
 
+## Deploy
+
+- Public demo: https://chesswise-ai.vercel.app. This is the Vercel project `chess-project` (team "jazz-and-co"). It builds every push to `main`, with Root Directory `frontend`, Vite, `npm ci`, `npm run build`, and output `dist`. The build settings live on the project, so don't add a root `vercel.json`.
+- The demo has no backend. Without `VITE_API_URL`, the app uses port 8000 on private hosts and `/api` on public ones, so `/health` fails and the app shows its offline mode. Keep that mode calm: no error banner on every move.
+
 ## Conventions
 
 - Validate every FEN and move sequence with python-chess before committing puzzle, trap or benchmark data (see `.gemini/rules/`).

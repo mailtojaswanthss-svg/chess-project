@@ -168,6 +168,12 @@
   white-space: nowrap;
 }
 
+.card__meta:has(.metric-info) {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .card__body {
   color: var(--text-2);
 }

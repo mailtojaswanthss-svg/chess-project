@@ -24,6 +24,9 @@ Run from the repo root unless noted.
 - Load models once per process through module-level singletons (`get_blunder_model()`); never inside a request handler.
 - Don't swallow exceptions silently. The coach path has several `except Exception: pass` blocks that hide real bugs; log or narrow any you touch.
 - `/tactical-analysis` and `/coach-advice` in `api.py` duplicate the same analysis pipeline. Change both, or better, extract a shared helper.
+- Never invent a number when a backend piece is missing. Analysis endpoints return `null` plus `risk_source` / `eval_source: "unavailable"`; the UI shows "—" with a reason (`components/MetricInfo.tsx`).
+- Every % or score in the UI gets a `MetricInfo` ⓘ. Its copy lives in `frontend/src/utils/metricCopy.ts` and must match the backend formula. `winChancesFromEval` there mirrors `_calculate_win_chances` in `api.py`.
+- Stockfish runs as one shared process per path (`engine.get_engine`), with each search behind a lock. Don't call `popen_uci` in a request.
 - Threat motif names must match between `_detect_tactical_threats` (`api.py`) and the branches in `coach.py` (the coach accepts both `"pinned"` and `"pin"`).
 
 ## Frontend structure

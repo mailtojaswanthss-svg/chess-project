@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { Compass, ShieldCheck, AlertTriangle, Flame } from "lucide-react";
 import { riskFor } from "../utils/chessUtils";
 import { useCountUp } from "../utils/useCountUp";
+import { MetricInfo, NEEDS_MODEL, Unavailable } from "./MetricInfo";
 
 interface BoardHudProps {
   sideToMove: "w" | "b";
@@ -10,6 +11,8 @@ interface BoardHudProps {
   moveCount: number;
   /** 0.0 to 1.0; null hides the meter (e.g. in puzzles) */
   riskScore: number | null;
+  /** The backend has no blunder model: show "—" rather than hiding the meter */
+  riskUnavailable?: boolean;
   isCheck?: boolean;
   isAnalyzing?: boolean;
   /** Extra controls shown at the end of the row (e.g. overlay toggles) */
@@ -38,6 +41,7 @@ export const BoardHud: React.FC<BoardHudProps> = ({
   fen,
   moveCount,
   riskScore,
+  riskUnavailable = false,
   isCheck = false,
   isAnalyzing = false,
   children,
@@ -70,7 +74,7 @@ export const BoardHud: React.FC<BoardHudProps> = ({
 
       {riskScore !== null && <div className={`hud-risk hud-risk--${risk.tone}`} title={`${risk.label}: ${risk.description}`}>
         <RiskIcon size={14} aria-hidden="true" />
-        <span className="hud-risk__label">Blunder risk</span>
+        <span className="hud-risk__label">Blunder risk <span className="hud-risk__unit">(≥1 pawn)</span></span>
         <div className="meter hud-risk__meter">
           <div
             className={`meter__fill meter__fill--${risk.tone} ${isAnalyzing ? "is-pending" : ""}`}
@@ -78,7 +82,15 @@ export const BoardHud: React.FC<BoardHudProps> = ({
           />
         </div>
         <span className="hud-risk__value num">{shownPct}%</span>
+        <MetricInfo metric="blunderRisk" />
       </div>}
+      {riskScore === null && riskUnavailable && (
+        <div className="hud-risk hud-risk--none">
+          <span className="hud-risk__label">Blunder risk</span>
+          <Unavailable reason={NEEDS_MODEL} />
+          <MetricInfo metric="blunderRisk" unavailableReason="The backend has no trained blunder model, so there's no reading. Train one with chess-train and set MODEL_PATH." />
+        </div>
+      )}
       {children && <div className="hud-extras">{children}</div>}
     </div>
   );

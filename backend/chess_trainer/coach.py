@@ -22,8 +22,9 @@ class TacticalContext(BaseModel):
     fen: str
     side_to_move: str
     opening_name: str
-    engine_eval_cp: int
-    blunder_probability: float
+    # None when Stockfish or the blunder model isn't available
+    engine_eval_cp: Optional[int]
+    blunder_probability: Optional[float]
     risk_band: str
     archetype: Optional[str] = None
     motifs: List[str] = Field(default_factory=list)
@@ -47,8 +48,8 @@ class CoachExplanation(BaseModel):
 
 def build_tactical_context(
     board: chess.Board,
-    engine_eval_cp: int = 0,
-    blunder_probability: float = 0.15,
+    engine_eval_cp: Optional[int] = None,
+    blunder_probability: Optional[float] = None,
     risk_band: str = "low",
     opening_name: str = "Standard Opening",
     archetype: Optional[str] = None,
@@ -137,8 +138,8 @@ POSITION CONTEXT:
 - Side to move: {ctx.side_to_move}
 - FEN: {ctx.fen}
 - Opening: {ctx.opening_name}
-- Evaluation: {ctx.engine_eval_cp} centipawns
-- Calibrated Blunder Risk: {ctx.blunder_probability * 100:.1f}% ({ctx.risk_band} danger)
+- Evaluation: {f"{ctx.engine_eval_cp} centipawns" if ctx.engine_eval_cp is not None else "not available (no engine)"}
+- Calibrated Blunder Risk: {f"{ctx.blunder_probability * 100:.1f}% ({ctx.risk_band} danger)" if ctx.blunder_probability is not None else "not available (no model)"}
 - Player Tactical Archetype: {ctx.archetype or 'Balanced Competitor'}
 - Active Motifs: {', '.join(ctx.motifs) if ctx.motifs else 'None detected'}
 - Immediate Threats: {'; '.join(ctx.threat_descriptions) if ctx.threat_descriptions else 'None immediately hanging'}
@@ -275,7 +276,7 @@ def _generate_deterministic_grandmaster_advice(ctx: TacticalContext) -> CoachExp
         )
 
     # 4. High Calibrated Blunder Risk
-    if ctx.risk_band in ("high", "extreme") or ctx.blunder_probability > 0.45:
+    if ctx.blunder_probability is not None and (ctx.risk_band in ("high", "extreme") or ctx.blunder_probability > 0.45):
         arch_note = f" (Aligns with your '{ctx.archetype}' profile)" if ctx.archetype else ""
         return CoachExplanation(
             headline=f"High Blunder Danger: Sharp tactical crossroad{arch_note}",
@@ -302,7 +303,10 @@ def _generate_deterministic_grandmaster_advice(ctx: TacticalContext) -> CoachExp
         )
 
     # 6. Strategic / Positional Guidance
-    adv_side = "advantageous" if ctx.engine_eval_cp > 80 else "contested" if abs(ctx.engine_eval_cp) < 50 else "challenging"
+    if ctx.engine_eval_cp is None:
+        adv_side = "unclear without the engine"
+    else:
+        adv_side = "advantageous" if ctx.engine_eval_cp > 80 else "contested" if abs(ctx.engine_eval_cp) < 50 else "challenging"
     return CoachExplanation(
         headline=f"Strategic Development: Position is {adv_side} ({ctx.opening_name})",
         concept="Positional Harmony & Center Outposts",

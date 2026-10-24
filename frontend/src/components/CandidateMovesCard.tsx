@@ -2,20 +2,24 @@ import "./CandidateMovesCard.css";
 import React from "react";
 import { Sparkles, Eye } from "lucide-react";
 import type { CandidateMove } from "../types/chess";
+import { winChancesFromEval } from "../utils/metricCopy";
+import { MetricInfo, NEEDS_ENGINE, Unavailable } from "./MetricInfo";
 
 interface CandidateMovesCardProps {
   candidateMoves: CandidateMove[];
   /** Candidate scores arrive from the side-to-move's point of view. */
   sideToMove: "w" | "b";
   isLoading?: boolean;
+  /** Backend has no Stockfish */
+  engineUnavailable?: boolean;
   onHoverCandidateMove?: (uci: string | null) => void;
   hoveredUci?: string | null;
 }
 
-// Expected score for White from a White-perspective centipawn evaluation
+// White's expected score (win + half the draws), on the same curve as Outlook
 const whiteWinPct = (whiteCp: number): number => {
-  const pct = 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * whiteCp)) - 1);
-  return Math.max(2, Math.min(98, Math.round(pct)));
+  const c = winChancesFromEval(whiteCp);
+  return Math.max(2, Math.min(98, Math.round((c.white + c.draw / 2) * 100)));
 };
 
 const formatPawns = (cp: number): string => {
@@ -36,6 +40,7 @@ export const CandidateMovesCard: React.FC<CandidateMovesCardProps> = ({
   candidateMoves,
   sideToMove,
   isLoading = false,
+  engineUnavailable = false,
   onHoverCandidateMove,
   hoveredUci,
 }) => {
@@ -47,7 +52,17 @@ export const CandidateMovesCard: React.FC<CandidateMovesCardProps> = ({
         <h2 className="card__title">
           <Sparkles size={16} /> Candidate moves
         </h2>
-        <span className="card__meta">Stockfish multi-PV</span>
+        <span className="card__meta">
+          Stockfish top 3
+          <MetricInfo
+            metric="opponentSlip"
+            unavailableReason={
+              candidateMoves.length > 0 && candidateMoves.every((c) => c.blunder_probability === null)
+                ? "Hidden for now: it needs the blunder model, which isn't loaded."
+                : null
+            }
+          />
+        </span>
       </header>
 
       {showSkeleton ? (
@@ -56,6 +71,8 @@ export const CandidateMovesCard: React.FC<CandidateMovesCardProps> = ({
             <div key={i} className="skeleton cand-skeleton" />
           ))}
         </div>
+      ) : candidateMoves.length === 0 && engineUnavailable ? (
+        <p className="card__empty"><Unavailable reason={NEEDS_ENGINE} /> Connect Stockfish to see the engine's top moves.</p>
       ) : candidateMoves.length === 0 ? (
         <p className="card__empty">Make a move to see the engine's top lines.</p>
       ) : (
@@ -63,7 +80,7 @@ export const CandidateMovesCard: React.FC<CandidateMovesCardProps> = ({
           <div className="cand-head" aria-hidden="true">
             <span>#</span>
             <span>Move</span>
-            <span>White / Black</span>
+            <span>White's expected score</span>
             <span className="cand-head__eval">Eval</span>
           </div>
           <ol className={`cand-list stagger ${isLoading ? "is-refreshing" : ""}`}>
@@ -89,7 +106,7 @@ export const CandidateMovesCard: React.FC<CandidateMovesCardProps> = ({
                     {cand.san}
                     <Eye size={12} className="cand-peek" aria-hidden="true" />
                   </span>
-                  <span className="cand-bar" title={`White ${white}% · Black ${100 - white}%`}>
+                  <span className="cand-bar" title={`White's expected score ${white}% (wins plus half the draws), from the engine eval`}>
                     <span className="cand-bar__white" style={{ width: `${white}%` }} />
                   </span>
                   <span className={`cand-eval num cand-eval--${tone}`}>{formatPawns(whiteCp)}</span>
@@ -98,9 +115,11 @@ export const CandidateMovesCard: React.FC<CandidateMovesCardProps> = ({
                       {QUALITY[cand.classification] ?? cand.classification}
                     </span>
                     {cand.loss_centipawns > 0 && <span className="num">−{cand.loss_centipawns} cp</span>}
-                    <span>
-                      Reply-error risk <span className="num">{Math.round(cand.blunder_probability * 100)}%</span>
-                    </span>
+                    {cand.blunder_probability !== null && (
+                      <span title="Chance your opponent then loses a pawn or more on their reply">
+                        Opponent slip chance <span className="num">{Math.round(cand.blunder_probability * 100)}%</span>
+                      </span>
+                    )}
                   </span>
                 </li>
               );

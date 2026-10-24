@@ -350,3 +350,18 @@
 .puzzle-actions__spacer {
   flex: 1;
 }
+
+.outlook-source {
+  margin: -4px 0 0;
+  font-size: var(--text-label);
+  color: var(--text-3);
+}
+
+.wdl-unavailable {
+  margin: 0;
+  padding: 10px 0;
+}
+
+.outlook-status--muted {
+  color: var(--text-3);
+}

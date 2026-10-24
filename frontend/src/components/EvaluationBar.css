@@ -52,3 +52,7 @@
   top: auto;
   bottom: 6px;
 }
+
+.eval-bar.is-unavailable {
+  opacity: 0.45;
+}

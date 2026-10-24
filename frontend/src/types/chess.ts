@@ -3,10 +3,11 @@ import type { Move } from "chess.js";
 export type RiskBand = "low" | "medium" | "high";
 
 export type Analysis = {
-  blunder_probability: number;
+  /** null when the backend has no blunder model */
+  blunder_probability: number | null;
   rating: number;
   fen: string;
-  risk_band: RiskBand;
+  risk_band: RiskBand | null;
   model_samples: number | null;
   side_to_move?: "w" | "b";
 };
@@ -38,6 +39,8 @@ export type ModelHealth = {
   status?: string;
   model_loaded?: boolean;
   model_train_samples: number | null;
+  engine_ready?: boolean;
+  maia_available?: boolean;
   model_metrics?: {
     accuracy?: number;
     majority_accuracy?: number;
@@ -75,7 +78,8 @@ export type CandidateMove = {
   uci: string;
   centipawns: number;
   loss_centipawns: number;
-  blunder_probability: number;
+  /** Chance the opponent blunders after this move; null without a model */
+  blunder_probability: number | null;
   classification: MoveClassification;
 };
 
@@ -88,14 +92,22 @@ export type WinChances = {
 export type TacticalAnalysis = {
   fen: string;
   side_to_move: "White" | "Black";
-  overall_blunder_probability: number;
-  risk_band: RiskBand;
+  /** null when the backend has no blunder model */
+  overall_blunder_probability: number | null;
+  risk_band: RiskBand | null;
   threats: ThreatItem[];
   candidate_moves: CandidateMove[];
   coach_explanation: string;
-  win_chances: WinChances;
-  evaluation_centipawns: number;
+  /** Estimated from the engine eval; null without Stockfish */
+  win_chances: WinChances | null;
+  /** White's point of view; null without Stockfish */
+  evaluation_centipawns: number | null;
+  risk_source?: MetricSource;
+  eval_source?: MetricSource;
 };
+
+/** "final" means the game is over and the value is exact */
+export type MetricSource = "model" | "engine" | "unavailable" | "final";
 
 export type MoveAnalysisItem = {
   ply: number;
@@ -194,6 +206,9 @@ export type BlunderDnaReport = {
   games_analyzed: number;
   blunders_detected: number;
   critical_advice: string[];
+  positions_analyzed?: number;
+  /** True when no games were analysed and this is a fixed example */
+  is_sample?: boolean;
 };
 
 export type TrapDrill = {

@@ -3,19 +3,24 @@ import React from "react";
 import { Activity, Trophy } from "lucide-react";
 import type { SavedGame, WinChances } from "../../types/chess";
 import { coachingTakeaway } from "../../utils/chessUtils";
+import { MetricInfo, NEEDS_ENGINE, Unavailable } from "../MetricInfo";
 
 interface OutlookCardProps {
   winChances?: WinChances | null;
+  /** Backend has no Stockfish, so there are no win chances */
+  evalUnavailable?: boolean;
   isCheck: boolean;
   moveCount: number;
-  riskScore: number;
+  /** null when there's no blunder model reading */
+  riskScore: number | null;
   lastMoveSan?: string;
   outcome?: SavedGame | null;
 }
 
-function statusLine(isCheck: boolean, moveCount: number, riskScore: number): { tone: string; text: string } {
+function statusLine(isCheck: boolean, moveCount: number, riskScore: number | null): { tone: string; text: string } {
   if (isCheck) return { tone: "danger", text: "King in check: legal replies are limited." };
   if (moveCount <= 6) return { tone: "accent", text: "Opening: standard development keeps risk low." };
+  if (riskScore === null) return { tone: "muted", text: "No risk reading yet: it needs the blunder model." };
   if (riskScore >= 0.65) return { tone: "danger", text: "High tension: a careless move is likely to be punished." };
   if (riskScore >= 0.35) return { tone: "warn", text: "Sharp position: check every forcing reply." };
   return { tone: "good", text: "Stable: pieces defended, king secure." };
@@ -23,6 +28,7 @@ function statusLine(isCheck: boolean, moveCount: number, riskScore: number): { t
 
 export const OutlookCard: React.FC<OutlookCardProps> = ({
   winChances,
+  evalUnavailable = false,
   isCheck,
   moveCount,
   riskScore,
@@ -57,6 +63,7 @@ export const OutlookCard: React.FC<OutlookCardProps> = ({
       <header className="card__header">
         <h2 className="card__title">
           <Activity size={16} /> Outlook
+          <MetricInfo metric="outlook" unavailableReason={evalUnavailable ? "Stockfish isn't connected, so there's no evaluation to convert." : null} />
         </h2>
         {lastMoveSan && (
           <span className="card__meta">
@@ -78,9 +85,12 @@ export const OutlookCard: React.FC<OutlookCardProps> = ({
             <span>Black <span className="num">{pct(winChances.black)}%</span></span>
           </div>
         </div>
+      ) : evalUnavailable ? (
+        <p className="wdl-unavailable"><Unavailable reason={NEEDS_ENGINE} /></p>
       ) : (
         <div className="skeleton wdl-skeleton" />
       )}
+      {winChances && <p className="outlook-source">Estimated from the engine evaluation</p>}
 
       <p className={`outlook-status outlook-status--${status.tone}`}>
         <span className="live-dot" />

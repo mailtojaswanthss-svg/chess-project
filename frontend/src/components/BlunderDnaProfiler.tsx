@@ -4,6 +4,7 @@ import { Crosshair, Sparkles, Flame, GraduationCap, ShieldCheck, AlertOctagon, P
 import { useCountUp } from "../utils/useCountUp";
 import type { BlunderDnaReport, BlunderDnaDimensions, SavedGame } from "../types/chess";
 import { playSound } from "../utils/audio";
+import { MetricInfo } from "./MetricInfo";
 
 interface BlunderDnaProfilerProps {
   savedGames: SavedGame[];
@@ -52,13 +53,18 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
-  const fetchProfile = async (pgnTexts?: string[]) => {
+  const fetchProfile = async (games: SavedGame[]) => {
     setIsLoading(true);
     try {
       const resp = await fetch(`${apiUrl}/blunder-dna`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pgn_text: pgnTexts && pgnTexts.length > 0 ? pgnTexts.join("\n\n") : undefined }),
+        // Send each game with the colour you played, so only your positions are counted
+        body: JSON.stringify({
+          games: games
+            .filter((g) => g.pgn)
+            .map((g) => ({ pgn: g.pgn, player_color: g.playerColor ?? null })),
+        }),
       });
       if (resp.ok) {
         const data = (await resp.json()) as BlunderDnaReport;
@@ -90,6 +96,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
         resilience_score: 72,
         games_analyzed: 0,
         blunders_detected: 0,
+        is_sample: true,
         critical_advice: [
           "Scan all unprotected pieces ('LPDO') before selecting a candidate move.",
           "Ensure your king has an escape square before committing heavy pieces to the attack.",
@@ -102,8 +109,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
   };
 
   useEffect(() => {
-    const pgns = savedGames.map((g) => g.pgn).filter(Boolean);
-    fetchProfile(pgns);
+    fetchProfile(savedGames);
   }, [savedGames]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPreset = (key: string) => {
@@ -166,6 +172,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
       resilience_score: resilience,
       games_analyzed: 0,
       blunders_detected: 0,
+      is_sample: true,
       critical_advice: [
         "Proactively reinforce threatened anchor pieces before advancing.",
         "Verify your King escape corridor before exchanging queens.",
@@ -192,7 +199,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
     { key: "hanging_pieces", label: "Hanging Pieces", value: dims.hanging_pieces, angle: -30 },
     { key: "overloaded_defenders", label: "Overloaded Def.", value: dims.overloaded_defenders, angle: 30 },
     { key: "back_rank", label: "Back Rank", value: dims.back_rank, angle: 90 },
-    { key: "time_scramble", label: "Time Scramble", value: dims.time_scramble, angle: 150 },
+    { key: "time_scramble", label: "Late-game slips", value: dims.time_scramble, angle: 150 },
     { key: "pawn_structure", label: "Pawn Structure", value: dims.pawn_structure, angle: 210 },
   ];
 
@@ -232,7 +239,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
       lessonTarget: "The Art of Defense & Parrying Swindles",
     },
     time_scramble: {
-      desc: "Sudden spike in tactical blunders occurring after move 30 or in accelerated clock situations.",
+      desc: "Loose pieces in your positions after move 25. There's no clock data, so this stands in for time pressure.",
       cure: "Slow down when entering complex transitions; simplify into solid pawn endings when ahead.",
       lessonTarget: "Endgame Precision & Lucena Technique",
     },
@@ -253,12 +260,12 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
   const accent = profile?.archetype.badge_color ?? "var(--accent)";
   const selected = selectedAxis ? axes.find((a) => a.key === selectedAxis) : undefined;
   const usingExample = activePreset !== null;
-  const noGames = !usingExample && savedGames.length === 0;
+  const isSample = !usingExample && (profile?.is_sample ?? savedGames.length === 0);
 
   const showMyGames = () => {
     playSound("click");
     setActivePreset(null);
-    fetchProfile(savedGames.map((g) => g.pgn).filter(Boolean));
+    fetchProfile(savedGames);
   };
 
   return (
@@ -299,12 +306,15 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
         </div>
       </div>
 
-      {(noGames || (isOffline && !usingExample)) && (
+      {isSample && (
         <div className="dna-notice" role="status">
           <Sparkles size={15} aria-hidden="true" />
-          {isOffline
-            ? "The analysis server is offline, so this is a sample profile rather than your games."
-            : "No finished games yet. Play a game on the Play tab and your profile builds itself. Until then you're seeing a baseline."}
+          <span>
+            <strong>Sample profile.</strong>{" "}
+            {isOffline
+              ? "The analysis server is offline, so these numbers are an example, not your games."
+              : "These numbers are an example. Play or import games and your own profile replaces it."}
+          </span>
         </div>
       )}
 
@@ -315,14 +325,13 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
         ) : (
           <>
             <div key={profile?.archetype.name} className="dna-identity">
-              <div
-                className="dna-ring"
-                style={{ "--pct": `${resilience}%` } as React.CSSProperties}
-                role="img"
-                aria-label={`Tactical resilience ${profile?.resilience_score ?? 0} out of 100`}
-              >
-                <span className="dna-ring__value num">{resilience}</span>
-                <span className="dna-ring__label">Resilience</span>
+              <div className="dna-ring" style={{ "--pct": `${resilience}%` } as React.CSSProperties}>
+                <span className="dna-ring__value num" aria-label={`Resilience ${profile?.resilience_score ?? 0} out of 100`}>
+                  {resilience}
+                </span>
+                <span className="dna-ring__label">
+                  Resilience <MetricInfo metric="resilience" />
+                </span>
               </div>
               <div className="dna-identity__text">
                 <span className="dna-identity__kicker">{usingExample ? "Example archetype" : "Your archetype"}</span>
@@ -333,7 +342,17 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
             <dl className="dna-kpis">
               <div>
                 <dt>Games analysed</dt>
-                <dd className="num">{usingExample || isOffline ? "—" : profile?.games_analyzed ?? 0}</dd>
+                <dd className="num">{usingExample || isSample ? "—" : profile?.games_analyzed ?? 0}</dd>
+              </div>
+              <div>
+                <dt>
+                  Risky positions <MetricInfo metric="riskyPositions" />
+                </dt>
+                <dd className="num">
+                  {usingExample || isSample
+                    ? "—"
+                    : `${profile?.blunders_detected ?? 0} of ${profile?.positions_analyzed ?? 0}`}
+                </dd>
               </div>
               <div>
                 <dt>Biggest leak</dt>
@@ -356,7 +375,10 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
               <h2 className="card__title">
                 <Crosshair size={16} /> Weakness map
               </h2>
-              <span className="card__meta">Tap an axis</span>
+              <span className="card__meta">
+                % of your positions · tap an axis
+                <MetricInfo metric="dnaDimensions" />
+              </span>
             </header>
             <svg viewBox="-70 -6 500 336" className="radar-svg" role="img" aria-label="Weakness radar">
               {[0.25, 0.5, 0.75, 1].map((scale) => (

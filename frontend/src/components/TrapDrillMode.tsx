@@ -22,6 +22,7 @@ import {
 import type { TrapDrill } from "../types/chess";
 import { playSound } from "../utils/audio";
 import { FALLBACK_TRAPS } from "../data/traps";
+import { MetricInfo } from "./MetricInfo";
 
 interface TrapDrillModeProps {
   apiUrl?: string;
@@ -314,7 +315,7 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
     };
   }
 
-  const accuracyPct = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 100;
+  const accuracyPct = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : null;
 
   return (
     <div className="trap-drill-container">
@@ -359,8 +360,10 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
               <Zap size={18} className="text-cyan" />
             </div>
             <div className="stat-content">
-              <span className="stat-number">{accuracyPct}%</span>
-              <span className="stat-name">Accuracy ({correctCount}/{totalAttempts})</span>
+              <span className="stat-number">{accuracyPct === null ? "—" : `${accuracyPct}%`}</span>
+              <span className="stat-name">
+                Accuracy ({correctCount}/{totalAttempts}) <MetricInfo metric="spotterAccuracy" />
+              </span>
             </div>
           </div>
         </div>

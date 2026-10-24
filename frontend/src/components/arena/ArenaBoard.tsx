@@ -13,6 +13,8 @@ interface ArenaBoardProps {
   boardRef?: React.Ref<HTMLDivElement>;
   isFlipped: boolean;
   evaluationCentipawns: number | null;
+  /** The backend has no Stockfish, so there's no eval to show */
+  evalUnavailable?: boolean;
   turn?: "w" | "b";
   isCheck?: boolean;
   squareStyles?: Record<string, React.CSSProperties>;
@@ -32,6 +34,7 @@ export const ArenaBoard: React.FC<ArenaBoardProps> = ({
   boardRef,
   isFlipped,
   evaluationCentipawns,
+  evalUnavailable = false,
   turn,
   isCheck = false,
   squareStyles,
@@ -39,7 +42,7 @@ export const ArenaBoard: React.FC<ArenaBoardProps> = ({
   interactive,
 }) => (
   <div className="arena-board">
-    <EvaluationBar evaluationCentipawns={evaluationCentipawns} isFlipped={isFlipped} />
+    <EvaluationBar evaluationCentipawns={evaluationCentipawns} isFlipped={isFlipped} unavailable={evalUnavailable} />
     <div
       className={`board-frame ${turn ? `board-frame--turn-${turn}` : ""} ${isCheck ? "is-check" : ""}`}
       ref={boardRef}

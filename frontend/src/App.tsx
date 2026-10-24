@@ -55,7 +55,27 @@ import {
 } from "./utils/chessUtils";
 import { playSound, setSoundEnabled } from "./utils/audio";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+/**
+ * Where the FastAPI engine server lives. VITE_API_URL wins when set. Otherwise a copy
+ * opened on this machine or the home network talks to port 8000 on the same host
+ * (so phones on the Wi-Fi reach the PC, not themselves), and a public copy uses a
+ * same-origin path that isn't there, which puts the app in its calm offline mode.
+ */
+function defaultApiUrl(): string {
+  const { hostname, protocol } = window.location;
+  const isPrivate =
+    protocol === "file:" ||
+    hostname === "" ||
+    hostname === "localhost" ||
+    hostname === "[::1]" ||
+    hostname.endsWith(".local") ||
+    /^(127|10)\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+  return isPrivate ? `http://${hostname || "127.0.0.1"}:8000` : "/api";
+}
+
+const API_URL = import.meta.env.VITE_API_URL ?? defaultApiUrl();
 const SAVED_GAMES_KEY = "chesswise.completed-games";
 // Set once the Home intro has been seen; later visits open straight on Play
 const SEEN_HOME_KEY = "chesswise.seen-home";

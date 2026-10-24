@@ -10,6 +10,7 @@ import {
   Swords,
   GraduationCap,
   Archive,
+  House,
   Sun,
   Moon,
   type LucideIcon,
@@ -32,6 +33,7 @@ interface HeaderProps {
 }
 
 const TABS: { id: AppTab; label: string; icon: LucideIcon }[] = [
+  { id: "home", label: "Home", icon: House },
   { id: "arena", label: "Play", icon: Swords },
   { id: "trap_dojo", label: "Trap Spotter", icon: Target },
   { id: "blunder_dna", label: "Player Profile", icon: Dna },
@@ -92,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="topbar">
-      <button className="brand" onClick={() => handleTab("arena")} aria-label="ChessWise AI home">
+      <button className="brand" onClick={() => handleTab("home")} aria-label="ChessWise AI home">
         <Logo size={40} className="brand-mark" />
         <span className="brand-text">
           <strong>

@@ -13,7 +13,7 @@ export type Analysis = {
 };
 
 export type PlayMode = "free_lab" | "max_engine" | "human_sparring" | "tricky_bot" | "trap_puzzle";
-export type AppTab = "arena" | "trap_dojo" | "blunder_dna" | "academy" | "settings";
+export type AppTab = "home" | "arena" | "trap_dojo" | "blunder_dna" | "academy" | "settings";
 
 export interface AcademyLesson {
   id: string;

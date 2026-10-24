@@ -21,7 +21,8 @@ Run from the repo root unless noted.
 ## Deploy
 
 - Public demo: https://chesswise-ai.vercel.app. This is the Vercel project `chess-project` (team "jazz-and-co"). It builds every push to `main`, with Root Directory `frontend`, Vite, `npm ci`, `npm run build`, and output `dist`. The build settings live on the project, so don't add a root `vercel.json`.
-- The demo has no backend. Without `VITE_API_URL`, the app uses port 8000 on private hosts and `/api` on public ones, so `/health` fails and the app shows its offline mode. Keep that mode calm: no error banner on every move.
+- The demo has no backend. Without `VITE_API_URL`, the app uses port 8000 on private hosts and `/api` on public ones, so `/health` fails and the app shows its offline mode. Keep that mode calm: no error banner on every move. Analysis waits for the first health check, so a slow check can't race it into an error.
+- "Connect your engine" (`components/EngineConnectDialog.tsx`, opened from the header's engine pill) points any copy, the demo included, at a server such as `http://localhost:8000`. It probes `/health` first and saves the address in `localStorage` (`chesswise.engine-url`, see `utils/engineUrl.ts`). The backend allows the demo origin by default and sets `allow_private_network` so Chrome's private-network preflight passes. Only the browser that connects reaches that machine.
 
 ## Conventions
 

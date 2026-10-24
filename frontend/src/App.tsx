@@ -27,6 +27,7 @@ import { CandidateMovesCard } from "./components/CandidateMovesCard";
 import { ChessAcademy } from "./components/ChessAcademy";
 import { SettingsTab } from "./components/SettingsTab";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { EngineConnectDialog } from "./components/EngineConnectDialog";
 import { ArenaView } from "./components/arena/ArenaView";
 import { ArenaBoard } from "./components/arena/ArenaBoard";
 import { PlayToolbar, MAIA_RATINGS } from "./components/arena/PlayToolbar";
@@ -54,40 +55,22 @@ import {
   riskFor,
 } from "./utils/chessUtils";
 import { playSound, setSoundEnabled } from "./utils/audio";
+import { defaultApiUrl, initialApiUrl, saveEngineUrl } from "./utils/engineUrl";
 
-/**
- * Where the FastAPI engine server lives. VITE_API_URL wins when set. Otherwise a copy
- * opened on this machine or the home network talks to port 8000 on the same host
- * (so phones on the Wi-Fi reach the PC, not themselves), and a public copy uses a
- * same-origin path that isn't there, which puts the app in its calm offline mode.
- */
-function defaultApiUrl(): string {
-  const { hostname, protocol } = window.location;
-  const isPrivate =
-    protocol === "file:" ||
-    hostname === "" ||
-    hostname === "localhost" ||
-    hostname === "[::1]" ||
-    hostname.endsWith(".local") ||
-    /^(127|10)\./.test(hostname) ||
-    /^192\.168\./.test(hostname) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
-  return isPrivate ? `http://${hostname || "127.0.0.1"}:8000` : "/api";
-}
-
-const API_URL = import.meta.env.VITE_API_URL ?? defaultApiUrl();
 const SAVED_GAMES_KEY = "chesswise.completed-games";
 // Set once the Home intro has been seen; later visits open straight on Play
 const SEEN_HOME_KEY = "chesswise.seen-home";
 // Shown when this copy runs without the engine server (for example a shared link)
 const ENGINE_OFFLINE_NOTE =
-  "The chess engine isn't connected here, so the bots and the coach are off. Free play, puzzles and lessons still work.";
+  "The chess engine isn't connected, so the bots and the coach are off. Click \"Engine offline\" at the top to connect the one on your computer.";
 const STARTING_FEN = new Chess().fen();
 const NO_THREATS: ThreatItem[] = [];
 
 export default function App() {
   const appearance = useAppearance();
   const [game, setGame] = useState<Chess>(() => new Chess());
+  const gameRef = useRef(game);
+  gameRef.current = game;
   const [fenHistory, setFenHistory] = useState<string[]>([STARTING_FEN]);
   const [rating, setRating] = useState<number>(1200);
   const [playMode, setPlayMode] = useState<PlayMode>("free_lab");
@@ -168,8 +151,14 @@ export default function App() {
   const sessionsRef = useRef<Partial<Record<PlayMode, ModeSession>>>({});
   const resumeBotRef = useRef<boolean>(false);
 
+  // The engine server address: the built-in default, or one saved through "Connect your engine"
+  const [apiUrl, setApiUrl] = useState<string>(initialApiUrl);
+  const apiUrlRef = useRef(apiUrl);
+  apiUrlRef.current = apiUrl;
+  const [showEngineDialog, setShowEngineDialog] = useState(false);
+
   // Trap puzzles (arena mode)
-  const puzzles = useTrapPuzzles(API_URL);
+  const puzzles = useTrapPuzzles(apiUrl);
   const [puzzleIndex, setPuzzleIndex] = useState<number>(0);
   const [puzzleStep, setPuzzleStep] = useState<number>(0);
   const [puzzleStatus, setPuzzleStatus] = useState<PuzzleStatus>("solving");
@@ -185,6 +174,8 @@ export default function App() {
   // True once the health check fails: skip analysis calls instead of erroring on every move
   const [backendOffline, setBackendOffline] = useState(false);
   const backendOfflineRef = useRef(false);
+  // The health check in flight; analysis waits for it so a first load never races it
+  const healthRef = useRef<Promise<boolean> | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // Dedicated Review Game Instance (preserves active live match state)
@@ -288,21 +279,29 @@ export default function App() {
     return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
-  // Fetch backend health & model metrics
-  const checkHealth = useCallback(() => {
-    fetch(`${API_URL}/health`)
+  // Fetch backend health & model metrics. Resolves true when the engine server answered.
+  const checkHealth = useCallback((): Promise<boolean> => {
+    const pending = fetch(`${apiUrlRef.current}/health`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Health check failed"))))
       .then((data: ModelHealth) => {
+        if (healthRef.current !== pending) return true;
         setModelHealth(data);
         backendOfflineRef.current = false;
         setBackendOffline(false);
         setError(null);
+        return true;
       })
       .catch(() => {
+        if (healthRef.current !== pending) return false;
         setModelHealth(null);
         backendOfflineRef.current = true;
         setBackendOffline(true);
+        // Whatever failed before the check finished was the missing server, not this position
+        setError(null);
+        return false;
       });
+    healthRef.current = pending;
+    return pending;
   }, []);
 
   useEffect(() => {
@@ -327,6 +326,8 @@ export default function App() {
   const analyzePosition = useCallback(
     async (position: Chess) => {
       const reqId = ++analysisRequestIdRef.current;
+      if (healthRef.current) await healthRef.current;
+      if (reqId !== analysisRequestIdRef.current) return;
       if (backendOfflineRef.current) {
         // No engine server: the panels show their "Needs Stockfish" states instead
         setTacticalAnalysis(null);
@@ -337,7 +338,7 @@ export default function App() {
       setIsAnalyzing(true);
       setError(null);
       try {
-        const res = await fetch(`${API_URL}/tactical-analysis`, {
+        const res = await fetch(`${apiUrlRef.current}/tactical-analysis`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fen: position.fen(), rating }),
@@ -367,7 +368,7 @@ export default function App() {
         if (reqId !== analysisRequestIdRef.current) return;
         // Graceful fallback to /predict if tactical endpoint encounters an error
         try {
-          const fallbackRes = await fetch(`${API_URL}/predict`, {
+          const fallbackRes = await fetch(`${apiUrlRef.current}/predict`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ fen: position.fen(), rating }),
@@ -382,7 +383,12 @@ export default function App() {
           // Ignore secondary fallback error
         }
         if (reqId === analysisRequestIdRef.current) {
-          setError(err instanceof Error ? err.message : "Could not connect to coach API.");
+          if (err instanceof TypeError) {
+            // The request never reached a server: it went away, so re-check instead of blaming the position
+            void checkHealth();
+          } else {
+            setError(err instanceof Error ? err.message : "Could not connect to coach API.");
+          }
         }
       } finally {
         if (reqId === analysisRequestIdRef.current) {
@@ -390,7 +396,33 @@ export default function App() {
         }
       }
     },
-    [rating]
+    [rating, checkHealth]
+  );
+
+  /**
+   * "Connect your engine": probe the address first, and only switch to it (and remember it
+   * in this browser) when its /health answers. null goes back to the built-in address.
+   */
+  const connectEngine = useCallback(
+    async (url: string | null): Promise<boolean> => {
+      const next = url ?? defaultApiUrl();
+      if (url) {
+        try {
+          const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(6000) });
+          if (!res.ok) return false;
+          await res.json();
+        } catch {
+          return false;
+        }
+      }
+      saveEngineUrl(url);
+      apiUrlRef.current = next;
+      setApiUrl(next);
+      const online = await checkHealth();
+      if (online && playModeRef.current !== "trap_puzzle") void analyzePosition(gameRef.current);
+      return online || url === null;
+    },
+    [checkHealth, analyzePosition]
   );
 
   // Analyse on mount and again whenever the rating changes, so requests never carry a stale rating
@@ -520,7 +552,7 @@ export default function App() {
             ? { fen: position.fen(), rating }
             : { fen: position.fen(), strength: Math.max(1, Math.min(20, Math.round(rating / 140))) };
 
-        const res = await fetch(`${API_URL}${endpoint}`, {
+        const res = await fetch(`${apiUrlRef.current}${endpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
@@ -607,7 +639,7 @@ export default function App() {
     if (completedGameSummary || isBotThinking || isFetchingHint) return;
     setIsFetchingHint(true);
     try {
-      const res = await fetch(`${API_URL}/move`, {
+      const res = await fetch(`${apiUrlRef.current}/move`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fen: game.fen(), strength: 10 }),
@@ -630,7 +662,7 @@ export default function App() {
     if (isFetchingCoachAdvice || completedGameSummary) return;
     setIsFetchingCoachAdvice(true);
     try {
-      const res = await fetch(`${API_URL}/coach-advice`, {
+      const res = await fetch(`${apiUrlRef.current}/coach-advice`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -993,7 +1025,7 @@ export default function App() {
     setError(null);
     try {
       const pgnText = await file.text();
-      const res = await fetch(`${API_URL}/analyze-game`, {
+      const res = await fetch(`${apiUrlRef.current}/analyze-game`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pgn_text: pgnText, rating }),
@@ -1099,7 +1131,7 @@ export default function App() {
     setIsUploading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/analyze-game`, {
+      const res = await fetch(`${apiUrlRef.current}/analyze-game`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pgn_text: pgn, rating }),
@@ -1330,6 +1362,7 @@ export default function App() {
         isFlipped={isFlipped}
         onFlipBoard={handleFlipBoard}
         onOpenSettings={() => setShowSettings(true)}
+        onOpenEngine={() => setShowEngineDialog(true)}
         isDark={appearance.isDark}
         onToggleTheme={() => appearance.setTheme(appearance.isDark ? "light" : "dark")}
       />
@@ -1543,12 +1576,12 @@ export default function App() {
             />
           )}
 
-          {activeTab === "trap_dojo" && <TrapDrillMode apiUrl={API_URL} />}
+          {activeTab === "trap_dojo" && <TrapDrillMode apiUrl={apiUrl} />}
 
           {activeTab === "blunder_dna" && (
             <BlunderDnaProfiler
               savedGames={savedGames}
-              apiUrl={API_URL}
+              apiUrl={apiUrl}
               onNavigateAcademy={handleNavigateAcademy}
               onPracticePuzzles={() => {
                 setActiveTab("arena");
@@ -1601,6 +1634,15 @@ export default function App() {
           setShowSettings(false);
           setConfirmClear(true);
         }}
+      />
+
+      <EngineConnectDialog
+        open={showEngineDialog}
+        onClose={() => setShowEngineDialog(false)}
+        currentUrl={apiUrl}
+        usingSavedUrl={apiUrl !== defaultApiUrl()}
+        online={modelHealth !== null}
+        onConnect={connectEngine}
       />
 
       <ConfirmDialog

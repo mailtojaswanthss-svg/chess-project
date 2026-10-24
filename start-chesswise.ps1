@@ -20,7 +20,8 @@ if (-not $localAddresses) {
 }
 $localAddress = $localAddresses[0]
 $networkOrigins = ($localAddresses | ForEach-Object { "http://$($_):5173" }) -join ","
-$frontendOrigins = "http://localhost:5173,http://127.0.0.1:5173,$networkOrigins"
+# The live demo is allowed too, so "Connect your engine" on https://chesswise-ai.vercel.app reaches this PC
+$frontendOrigins = "http://localhost:5173,http://127.0.0.1:5173,https://chesswise-ai.vercel.app,$networkOrigins"
 
 Start-Process powershell.exe -ArgumentList @(
     "-NoExit",

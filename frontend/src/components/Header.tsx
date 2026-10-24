@@ -30,6 +30,8 @@ interface HeaderProps {
   isFlipped: boolean;
   onFlipBoard: () => void;
   onOpenSettings: () => void;
+  /** Opens "Connect your engine" */
+  onOpenEngine: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
 }
@@ -53,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   isFlipped,
   onFlipBoard,
   onOpenSettings,
+  onOpenEngine,
   isDark,
   onToggleTheme,
 }) => {
@@ -65,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
   const statusText = !backendUp ? (backendOffline ? "Engine offline" : "Connecting") : fullyOnline ? "Engine online" : "Limited";
   const statusTitle = !backendUp
     ? backendOffline
-      ? "This copy runs without the engine server, so analysis, the bots and the coach are off. Free play, puzzles and lessons still work."
+      ? "No engine server is answering, so analysis, the bots and the coach are off. Click to connect the one on your computer."
       : "Connecting to the engine server"
     : fullyOnline
       ? `Backend connected · Stockfish ready · model trained on ${modelHealth?.model_train_samples?.toLocaleString() ?? 0} samples`
@@ -126,13 +129,19 @@ export const Header: React.FC<HeaderProps> = ({
       </nav>
 
       <div className="topbar-actions">
-        <span
+        <button
+          type="button"
           className={`engine-status ${fullyOnline ? "is-online" : ""}`}
           title={statusTitle}
+          aria-label={`${statusText}. Engine connection settings`}
+          onClick={() => {
+            playSound("click");
+            onOpenEngine();
+          }}
         >
           <span className="live-dot" />
           <span className="engine-status__text">{statusText}</span>
-        </span>
+        </button>
         <button
           className="btn btn--ghost btn--icon theme-toggle"
           aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}

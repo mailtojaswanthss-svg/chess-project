@@ -22,23 +22,26 @@
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  font-size: 24px;
-  line-height: 1;
-  color: #04131f;
-  background: linear-gradient(115deg, #7dd3fc 0%, var(--accent) 35%, #f0f9ff 50%, var(--accent) 65%, var(--good) 100%);
-  background-size: 250% 100%;
-  box-shadow: 0 8px 22px -10px rgba(56, 189, 248, 0.9);
-  animation: sheen 2.4s var(--ease-out) 300ms 1 both;
+  flex-shrink: 0;
+  filter: drop-shadow(0 8px 16px rgba(118, 150, 86, 0.45));
   transition: transform var(--dur-med) var(--ease-spring);
 }
 
 .brand:hover .brand-mark {
-  transform: rotate(-8deg) scale(1.06);
+  transform: rotate(-6deg) scale(1.06);
+}
+
+.brand-ai {
+  padding: 0 6px;
+  margin-left: 2px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: 3px;
 }
 
 .brand-text {
@@ -69,7 +72,7 @@
   max-width: 100%;
   padding: 4px;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(16, 24, 17, 0.75);
   border: 1px solid var(--border);
   overflow-x: auto;
   scroll-snap-type: x proximity;
@@ -88,8 +91,8 @@
   width: var(--ind-w, 0);
   transform: translateX(var(--ind-x, 0));
   border-radius: 10px;
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.2), rgba(56, 189, 248, 0.08));
-  box-shadow: inset 0 0 0 1px var(--accent-ring), 0 6px 20px -8px rgba(56, 189, 248, 0.7);
+  background: linear-gradient(180deg, rgba(155, 196, 90, 0.2), rgba(155, 196, 90, 0.08));
+  box-shadow: inset 0 0 0 1px var(--accent-ring), 0 6px 20px -8px rgba(155, 196, 90, 0.7);
   transition:
     transform 380ms var(--ease-out),
     width 380ms var(--ease-out);

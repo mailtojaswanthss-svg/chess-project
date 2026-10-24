@@ -5,8 +5,8 @@
 }
 
 .outlook--final {
-  border-color: rgba(251, 191, 36, 0.35);
-  animation: pop-in 520ms var(--ease-out) both;
+  border-color: rgba(231, 198, 107, 0.35);
+  animation: pop-in 520ms var(--ease-out) backwards;
 }
 
 .outlook-foot {
@@ -28,7 +28,7 @@
   height: 10px;
   border-radius: var(--radius-pill);
   overflow: hidden;
-  background: #1e293b;
+  background: #1f2b20;
 }
 
 .wdl__seg {
@@ -38,8 +38,8 @@
 }
 
 .wdl__seg--white { background: var(--piece-white); }
-.wdl__seg--draw { background: #64748b; }
-.wdl__seg--black { background: #020617; box-shadow: inset 0 0 0 1px var(--border-strong); }
+.wdl__seg--draw { background: #7b8670; }
+.wdl__seg--black { background: #080c08; box-shadow: inset 0 0 0 1px var(--border-strong); }
 
 .wdl__legend {
   display: flex;
@@ -76,7 +76,7 @@
 
 /* Coach */
 .coach.has-advice {
-  border-color: rgba(167, 139, 250, 0.35);
+  border-color: rgba(180, 156, 230, 0.35);
 }
 
 .coach-ask {
@@ -91,7 +91,7 @@
 .coach-advice {
   display: grid;
   gap: 12px;
-  animation: rise-in var(--dur-med) var(--ease-out) both;
+  animation: rise-in var(--dur-med) var(--ease-out) backwards;
 }
 
 .coach-meta {
@@ -195,7 +195,7 @@
 
 .threat:hover,
 .threat:focus-visible {
-  border-color: rgba(239, 68, 68, 0.45);
+  border-color: rgba(229, 103, 90, 0.45);
   background: var(--danger-soft);
   outline: none;
 }
@@ -241,4 +241,111 @@
   font-size: var(--text-label);
   color: var(--text-1);
   text-transform: uppercase;
+}
+
+/* Trap puzzle */
+.puzzle--solved {
+  border-color: rgba(129, 182, 76, 0.6);
+  animation: pop-in 520ms var(--ease-out) backwards;
+}
+
+.puzzle--wrong {
+  animation: shake 360ms var(--ease-out);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+.puzzle-brief {
+  display: grid;
+  gap: 8px;
+}
+
+.puzzle-brief__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.puzzle-brief__title {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+}
+
+.puzzle-brief strong {
+  color: var(--text-1);
+}
+
+.puzzle-move {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: #fecaca;
+}
+
+.puzzle-progress {
+  display: flex;
+  gap: 6px;
+}
+
+.puzzle-dot {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(238, 238, 210, 0.14);
+  transition: background var(--dur-med) var(--ease-out);
+}
+
+.puzzle-dot.is-done {
+  background: var(--good);
+}
+
+.puzzle-dot.is-next {
+  background: rgba(238, 238, 210, 0.45);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.puzzle-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.puzzle-status--correct,
+.puzzle-status--solved {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.puzzle-status--wrong {
+  background: var(--danger-soft);
+  color: #fecaca;
+}
+
+.puzzle-explain {
+  font-size: var(--text-small);
+  color: var(--text-2);
+  animation: slide-down var(--dur-med) var(--ease-out) backwards;
+}
+
+.puzzle-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.puzzle-actions__spacer {
+  flex: 1;
 }

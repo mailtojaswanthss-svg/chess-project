@@ -1,6 +1,6 @@
 import "./BlunderDnaProfiler.css";
 import React, { useState, useEffect } from "react";
-import { Crosshair, Sparkles, RefreshCw, Flame, GraduationCap, ShieldCheck, AlertOctagon } from "lucide-react";
+import { Crosshair, Sparkles, Flame, GraduationCap, ShieldCheck, AlertOctagon, Puzzle, TrendingUp, Gamepad2 } from "lucide-react";
 import { useCountUp } from "../utils/useCountUp";
 import type { BlunderDnaReport, BlunderDnaDimensions, SavedGame } from "../types/chess";
 import { playSound } from "../utils/audio";
@@ -9,6 +9,7 @@ interface BlunderDnaProfilerProps {
   savedGames: SavedGame[];
   apiUrl?: string;
   onNavigateAcademy?: (lessonId?: string) => void;
+  onPracticePuzzles?: () => void;
 }
 
 const PRESET_ARCHETYPES: Record<string, { dims: BlunderDnaDimensions; name: string; title: string }> = {
@@ -43,6 +44,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
   savedGames,
   apiUrl = "http://127.0.0.1:8000",
   onNavigateAcademy,
+  onPracticePuzzles,
 }) => {
   const [profile, setProfile] = useState<BlunderDnaReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -132,12 +134,12 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
           key === "swashbuckler"
             ? "#f97316"
             : key === "tunnelVision"
-            ? "#ef4444"
+            ? "#e5675a"
             : key === "glassCannon"
             ? "#ec4899"
             : key === "speedster"
-            ? "#eab308"
-            : "#10b981",
+            ? "#e8b44c"
+            : "#5fd08a",
         dominant_flaw:
           key === "swashbuckler"
             ? "Hanging Pieces (82% Leak Rate)"
@@ -241,204 +243,181 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
     },
   };
 
-  // Top 3 tactical leaks for "Fix Your Leaks" cards
-  const topLeaks = [...axes].sort((a, b) => b.value - a.value).slice(0, 3);
 
   const severity = (v: number) => (v >= 60 ? "high" : v >= 35 ? "medium" : "low");
   const rankedLeaks = [...axes].sort((a, b) => b.value - a.value);
+  const topLeaks = rankedLeaks.slice(0, 3);
+  const otherLeaks = rankedLeaks.slice(3);
+  const strongest = rankedLeaks[rankedLeaks.length - 1];
   const resilience = Math.round(useCountUp(profile?.resilience_score ?? 0, 900));
   const accent = profile?.archetype.badge_color ?? "var(--accent)";
   const selected = selectedAxis ? axes.find((a) => a.key === selectedAxis) : undefined;
-  const sourceLabel = activePreset
-    ? "Example profile"
-    : isOffline
-    ? "API offline: sample profile, not your games"
-    : `From ${savedGames.length} archived ${savedGames.length === 1 ? "game" : "games"}`;
+  const usingExample = activePreset !== null;
+  const noGames = !usingExample && savedGames.length === 0;
+
+  const showMyGames = () => {
+    playSound("click");
+    setActivePreset(null);
+    fetchProfile(savedGames.map((g) => g.pgn).filter(Boolean));
+  };
 
   return (
     <div className="view dna">
       <div className="page-head">
         <div>
-          <h1 className="page-title">Tactical DNA</h1>
-          <p className="page-sub">Six recurring weakness patterns from your games, and the drills that fix them.</p>
+          <h1 className="page-title">Player Profile</h1>
+          <p className="page-sub">Your recurring weak spots, ranked, with a drill for each one.</p>
         </div>
-        <span className={`pill ${isOffline && !activePreset ? "pill--warn" : activePreset ? "pill--violet" : "pill--accent"}`} role="status">
-          {sourceLabel}
-        </span>
-      </div>
-
-      <div className="dna-presets" role="group" aria-label="Profile source">
-        <button
-          className={`btn btn--sm ${activePreset === null ? "is-active" : ""}`}
-          onClick={() => {
-            playSound("click");
-            setActivePreset(null);
-            fetchProfile(savedGames.map((g) => g.pgn).filter(Boolean));
-          }}
-        >
-          <RefreshCw size={13} /> My games <span className="num">({savedGames.length})</span>
-        </button>
-        <span className="dna-presets__divider" aria-hidden="true" />
-        <span className="dna-presets__label">Examples</span>
-        {Object.entries(PRESET_ARCHETYPES).map(([key, data]) => (
-          <button
-            key={key}
-            className={`btn btn--sm btn--ghost ${activePreset === key ? "is-active" : ""}`}
-            onClick={() => loadPreset(key)}
-          >
-            {data.name.replace(/^The /, "")}
-          </button>
-        ))}
-      </div>
-
-      <div className="split-2">
-        {/* Left: who you are as a player */}
-        <section className="card dna-hero" style={{ "--dna-accent": accent } as React.CSSProperties} aria-label="Archetype">
-          {isLoading && !profile ? (
-            <div className="dna-hero__loading" aria-busy="true">
-              <div className="skeleton" style={{ height: 96 }} />
-              <div className="skeleton" style={{ height: 280 }} />
-            </div>
-          ) : (
-            <>
-              <div key={profile?.archetype.name} className="dna-identity">
-                <div
-                  className="dna-ring"
-                  style={{ "--pct": `${resilience}%` } as React.CSSProperties}
-                  role="img"
-                  aria-label={`Tactical resilience ${profile?.resilience_score ?? 0} out of 100`}
-                >
-                  <span className="dna-ring__value num">{resilience}</span>
-                  <span className="dna-ring__label">Resilience</span>
-                </div>
-                <div className="dna-identity__text">
-                  <span className="dna-identity__kicker">Your archetype</span>
-                  <h2 className="dna-identity__name">{profile?.archetype.name ?? "Unprofiled"}</h2>
-                  <p className="dna-identity__title">{profile?.archetype.title}</p>
-                  {profile?.archetype.quote && <p className="dna-identity__quote">{profile.archetype.quote}</p>}
-                </div>
-              </div>
-
-              <div className="dna-radar">
-                <svg viewBox="0 0 360 330" className="radar-svg" role="img" aria-label="Weakness radar">
-                  {[0.25, 0.5, 0.75, 1].map((scale) => (
-                    <polygon
-                      key={scale}
-                      className="radar-web"
-                      points={axes
-                        .map((a) => {
-                          const pt = getPoint(a.angle, scale * 100);
-                          return `${pt.x},${pt.y}`;
-                        })
-                        .join(" ")}
-                    />
-                  ))}
-                  {axes.map((a) => {
-                    const end = getPoint(a.angle, 100);
-                    return <line key={a.key} className="radar-spoke" x1={cx} y1={cy} x2={end.x} y2={end.y} />;
-                  })}
-                  <g key={polygonPoints} className="radar-shape">
-                    <polygon points={polygonPoints} className="radar-fill" />
-                    <polygon points={polygonPoints} className="radar-stroke" pathLength={1} />
-                  </g>
-                  {axes.map((a) => {
-                    const pt = getPoint(a.angle, a.value);
-                    const label = getPoint(a.angle, 128);
-                    const anchor = label.x < cx - 10 ? "end" : label.x > cx + 10 ? "start" : "middle";
-                    const isSelected = selectedAxis === a.key;
-                    const toggle = () => {
-                      playSound("click");
-                      setSelectedAxis(isSelected ? null : a.key);
-                    };
-                    return (
-                      <g
-                        key={a.key}
-                        className={`radar-axis radar-axis--${severity(a.value)} ${isSelected ? "is-selected" : ""}`}
-                        role="button"
-                        tabIndex={0}
-                        aria-pressed={isSelected}
-                        aria-label={`${a.label}: ${a.value}%`}
-                        onClick={toggle}
-                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggle()}
-                      >
-                        <circle cx={pt.x} cy={pt.y} r={isSelected ? 7 : 5} className="radar-point" />
-                        <text x={label.x} y={label.y} textAnchor={anchor} dominantBaseline="central" className="radar-label">
-                          {a.label}
-                        </text>
-                        <text
-                          x={label.x}
-                          y={label.y + 15}
-                          textAnchor={anchor}
-                          dominantBaseline="central"
-                          className="radar-value"
-                        >
-                          {a.value}%
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
-                <p className="dna-radar__hint">
-                  <Crosshair size={13} aria-hidden="true" /> Select an axis to see what it means
-                </p>
-              </div>
-
-              {selected && axisDetails[selected.key] && (
-                <div className="dna-axis-detail">
-                  <strong>
-                    <AlertOctagon size={15} aria-hidden="true" /> {selected.label}
-                  </strong>
-                  <p>{axisDetails[selected.key].desc}</p>
-                </div>
-              )}
-            </>
+        <div className="dna-source" role="group" aria-label="Profile source">
+          <div className="segmented">
+            <button className={`segmented__btn ${!usingExample ? "is-active" : ""}`} aria-pressed={!usingExample} onClick={showMyGames}>
+              <Gamepad2 size={14} aria-hidden="true" /> My games <span className="num">({savedGames.length})</span>
+            </button>
+            <button
+              className={`segmented__btn ${usingExample ? "is-active" : ""}`}
+              aria-pressed={usingExample}
+              onClick={() => loadPreset(activePreset ?? "glassCannon")}
+            >
+              Example
+            </button>
+          </div>
+          {usingExample && (
+            <select
+              id="dna-example"
+              className="dna-select"
+              aria-label="Example archetype"
+              value={activePreset ?? ""}
+              onChange={(e) => loadPreset(e.target.value)}
+            >
+              {Object.entries(PRESET_ARCHETYPES).map(([key, data]) => (
+                <option key={key} value={key}>
+                  {data.name.replace(/^The /, "")}
+                </option>
+              ))}
+            </select>
           )}
-        </section>
+        </div>
+      </div>
 
-        {/* Right: what to fix */}
-        <div className="dna-side">
-          <section className="card" aria-label="Tactical leaks">
+      {(noGames || (isOffline && !usingExample)) && (
+        <div className="dna-notice" role="status">
+          <Sparkles size={15} aria-hidden="true" />
+          {isOffline
+            ? "The analysis server is offline, so this is a sample profile rather than your games."
+            : "No finished games yet. Play a game on the Play tab and your profile builds itself. Until then you're seeing a baseline."}
+        </div>
+      )}
+
+      {/* Summary: who you are, in one row */}
+      <section className="card dna-summary" style={{ "--dna-accent": accent } as React.CSSProperties} aria-label="Profile summary">
+        {isLoading && !profile ? (
+          <div className="skeleton" style={{ height: 88 }} />
+        ) : (
+          <>
+            <div key={profile?.archetype.name} className="dna-identity">
+              <div
+                className="dna-ring"
+                style={{ "--pct": `${resilience}%` } as React.CSSProperties}
+                role="img"
+                aria-label={`Tactical resilience ${profile?.resilience_score ?? 0} out of 100`}
+              >
+                <span className="dna-ring__value num">{resilience}</span>
+                <span className="dna-ring__label">Resilience</span>
+              </div>
+              <div className="dna-identity__text">
+                <span className="dna-identity__kicker">{usingExample ? "Example archetype" : "Your archetype"}</span>
+                <h2 className="dna-identity__name">{profile?.archetype.name ?? "Unprofiled"}</h2>
+                <p className="dna-identity__quote">{profile?.archetype.quote}</p>
+              </div>
+            </div>
+            <dl className="dna-kpis">
+              <div>
+                <dt>Games analysed</dt>
+                <dd className="num">{usingExample || isOffline ? "—" : profile?.games_analyzed ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Biggest leak</dt>
+                <dd className="dna-kpi--bad">{topLeaks[0]?.label}</dd>
+              </div>
+              <div>
+                <dt>Strongest area</dt>
+                <dd className="dna-kpi--good">{strongest?.label}</dd>
+              </div>
+            </dl>
+          </>
+        )}
+      </section>
+
+      <div className="dna-main">
+        {/* Left: the shape of your weaknesses */}
+        <div className="dna-col">
+          <section className="card dna-radar-card" style={{ "--dna-accent": accent } as React.CSSProperties} aria-label="Weakness radar">
             <header className="card__header">
               <h2 className="card__title">
-                <Flame size={16} /> Leaks to fix
+                <Crosshair size={16} /> Weakness map
               </h2>
-              <span className="card__meta">Worst first</span>
+              <span className="card__meta">Tap an axis</span>
             </header>
-            <ol className="leak-list stagger">
-              {rankedLeaks.map((leak, idx) => {
-                const tone = severity(leak.value);
-                const details = axisDetails[leak.key];
+            <svg viewBox="-70 -6 500 336" className="radar-svg" role="img" aria-label="Weakness radar">
+              {[0.25, 0.5, 0.75, 1].map((scale) => (
+                <polygon
+                  key={scale}
+                  className="radar-web"
+                  points={axes
+                    .map((a) => {
+                      const pt = getPoint(a.angle, scale * 100);
+                      return `${pt.x},${pt.y}`;
+                    })
+                    .join(" ")}
+                />
+              ))}
+              {axes.map((a) => {
+                const end = getPoint(a.angle, 100);
+                return <line key={a.key} className="radar-spoke" x1={cx} y1={cy} x2={end.x} y2={end.y} />;
+              })}
+              <g key={polygonPoints} className="radar-shape">
+                <polygon points={polygonPoints} className="radar-fill" />
+                <polygon points={polygonPoints} className="radar-stroke" pathLength={1} />
+              </g>
+              {axes.map((a) => {
+                const pt = getPoint(a.angle, a.value);
+                const label = getPoint(a.angle, 122);
+                const anchor = label.x < cx - 10 ? "end" : label.x > cx + 10 ? "start" : "middle";
+                const isSelected = selectedAxis === a.key;
+                const toggle = () => {
+                  playSound("click");
+                  setSelectedAxis(isSelected ? null : a.key);
+                };
                 return (
-                  <li
-                    key={leak.key}
-                    className={`leak leak--${tone} ${selectedAxis === leak.key ? "is-selected" : ""}`}
-                    style={{ "--i": idx } as React.CSSProperties}
+                  <g
+                    key={a.key}
+                    className={`radar-axis radar-axis--${severity(a.value)} ${isSelected ? "is-selected" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    aria-label={`${a.label}: ${a.value}%`}
+                    onClick={toggle}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggle()}
                   >
-                    <span className="leak__rank num">{idx + 1}</span>
-                    <div className="leak__main">
-                      <div className="leak__top">
-                        <strong className="leak__name">{leak.label}</strong>
-                        <span className="leak__value num">{leak.value}%</span>
-                      </div>
-                      <div className="meter">
-                        <div className={`meter__fill meter__fill--${tone}`} style={{ width: `${leak.value}%` }} />
-                      </div>
-                      <p className="leak__cure">{details?.cure}</p>
-                    </div>
-                    <button
-                      className="btn btn--sm leak__train"
-                      onClick={() => {
-                        playSound("click");
-                        onNavigateAcademy?.(leak.key);
-                      }}
-                      aria-label={`Train ${leak.label} in the Academy`}
-                    >
-                      <GraduationCap size={14} /> <span className="leak__train-label">Train</span>
-                    </button>
-                  </li>
+                    <circle cx={pt.x} cy={pt.y} r={isSelected ? 7 : 5} className="radar-point" />
+                    <text x={label.x} y={label.y - 7} textAnchor={anchor} dominantBaseline="central" className="radar-label">
+                      {a.label}
+                    </text>
+                    <text x={label.x} y={label.y + 9} textAnchor={anchor} dominantBaseline="central" className="radar-value">
+                      {a.value}%
+                    </text>
+                  </g>
                 );
               })}
-            </ol>
+            </svg>
+            {selected && axisDetails[selected.key] && (
+              <div className="dna-axis-detail">
+                <strong>
+                  <AlertOctagon size={15} aria-hidden="true" /> {selected.label}
+                </strong>
+                <p>{axisDetails[selected.key].desc}</p>
+              </div>
+            )}
           </section>
 
           {profile && (
@@ -465,9 +444,97 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
                   </ul>
                 </div>
               </div>
+            </section>
+          )}
+        </div>
+
+        {/* Right: what to do about it */}
+        <div className="dna-col">
+          <section className="card" aria-label="Fix these first">
+            <header className="card__header">
+              <h2 className="card__title">
+                <Flame size={16} /> Fix these first
+              </h2>
+              <span className="card__meta">Your three biggest leaks</span>
+            </header>
+            <ol className="focus-list stagger">
+              {topLeaks.map((leak, idx) => {
+                const tone = severity(leak.value);
+                return (
+                  <li
+                    key={leak.key}
+                    className={`focus focus--${tone} ${selectedAxis === leak.key ? "is-selected" : ""}`}
+                    style={{ "--i": idx } as React.CSSProperties}
+                  >
+                    <div className="focus__top">
+                      <span className="focus__rank num">{idx + 1}</span>
+                      <strong className="focus__name">{leak.label}</strong>
+                      <span className={`focus__value num focus__value--${tone}`}>{leak.value}%</span>
+                    </div>
+                    <div className="meter">
+                      <div className={`meter__fill meter__fill--${tone}`} style={{ width: `${leak.value}%` }} />
+                    </div>
+                    <p className="focus__cure">{axisDetails[leak.key]?.cure}</p>
+                    <div className="focus__actions">
+                      <button
+                        className="btn btn--sm btn--primary"
+                        onClick={() => {
+                          playSound("click");
+                          onNavigateAcademy?.(leak.key);
+                        }}
+                      >
+                        <GraduationCap size={14} /> Lesson
+                      </button>
+                      {onPracticePuzzles && (
+                        <button
+                          className="btn btn--sm"
+                          onClick={() => {
+                            playSound("click");
+                            onPracticePuzzles();
+                          }}
+                        >
+                          <Puzzle size={14} /> Puzzles
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+
+          <section className="card" aria-label="Other areas">
+            <header className="card__header">
+              <h2 className="card__title">
+                <TrendingUp size={16} /> Other areas
+              </h2>
+            </header>
+            <ul className="other-list">
+              {otherLeaks.map((leak) => {
+                const tone = severity(leak.value);
+                return (
+                  <li key={leak.key} className="other">
+                    <button
+                      className="other__name"
+                      onClick={() => {
+                        playSound("click");
+                        setSelectedAxis(selectedAxis === leak.key ? null : leak.key);
+                      }}
+                    >
+                      {leak.label}
+                    </button>
+                    <div className="meter">
+                      <div className={`meter__fill meter__fill--${tone}`} style={{ width: `${leak.value}%` }} />
+                    </div>
+                    <span className="other__value num">{leak.value}%</span>
+                  </li>
+                );
+              })}
+            </ul>
+            {profile && (
               <details className="dna-prescription">
                 <summary>
-                  <Sparkles size={14} aria-hidden="true" /> Training prescription
+                  <Sparkles size={14} aria-hidden="true" /> Training plan
                 </summary>
                 <p>{profile.archetype.training_prescription}</p>
                 {profile.critical_advice.length > 0 && (
@@ -478,18 +545,8 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
                   </ul>
                 )}
               </details>
-              {!activePreset && !isOffline && (
-                <div className="dna-stats">
-                  <span>
-                    <span className="num">{profile.games_analyzed}</span> games analysed
-                  </span>
-                  <span>
-                    <span className="num">{profile.blunders_detected}</span> risky positions flagged
-                  </span>
-                </div>
-              )}
-            </section>
-          )}
+            )}
+          </section>
         </div>
       </div>
     </div>

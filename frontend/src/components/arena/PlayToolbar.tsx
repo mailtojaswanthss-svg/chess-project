@@ -1,25 +1,34 @@
 import "./Arena.css";
 import React from "react";
-import { FlaskConical, Zap, Brain, Bomb } from "lucide-react";
+import { FlaskConical, Cpu, Users, Bomb, Puzzle, Lock } from "lucide-react";
 import type { PlayMode } from "../../types/chess";
 
 export const MAIA_RATINGS = [1100, 1300, 1500, 1700, 1900];
 
-const MODES: { id: PlayMode; label: string; tip: string; icon: typeof Zap }[] = [
-  { id: "free_lab", label: "Free Lab", tip: "Move both sides and explore with live analysis", icon: FlaskConical },
-  { id: "max_engine", label: "Stockfish", tip: "Play Stockfish at an adjustable strength", icon: Zap },
-  { id: "human_sparring", label: "Maia", tip: "Play Maia-2, trained to move like humans at your level", icon: Brain },
-  { id: "tricky_bot", label: "Tricky Bot", tip: "A bot that picks the sound move most likely to make you blunder", icon: Bomb },
+export const MODES: { id: PlayMode; label: string; tip: string; icon: typeof Cpu }[] = [
+  { id: "free_lab", label: "Analysis", tip: "Move both sides freely with live engine analysis", icon: FlaskConical },
+  { id: "max_engine", label: "vs Stockfish", tip: "Play Stockfish at the strength you choose", icon: Cpu },
+  { id: "human_sparring", label: "vs Maia", tip: "Play Maia-2, trained to move like a human at your rating", icon: Users },
+  { id: "tricky_bot", label: "vs Trapper", tip: "A bot that picks sound moves most likely to make you blunder", icon: Bomb },
+  { id: "trap_puzzle", label: "Trap puzzles", tip: "Your opponent fell for a classic trap: find the punishing line", icon: Puzzle },
 ];
 
 interface PlayToolbarProps {
   playMode: PlayMode;
   rating: number;
+  /** True once a rated game has started; the rating can't change until it ends. */
+  ratingLocked?: boolean;
   onSelectMode: (mode: PlayMode) => void;
   onSetRating: (rating: number) => void;
 }
 
-export const PlayToolbar: React.FC<PlayToolbarProps> = ({ playMode, rating, onSelectMode, onSetRating }) => (
+export const PlayToolbar: React.FC<PlayToolbarProps> = ({
+  playMode,
+  rating,
+  ratingLocked = false,
+  onSelectMode,
+  onSetRating,
+}) => (
   <div className="play-toolbar">
     <div className="segmented play-modes" role="group" aria-label="Game mode">
       {MODES.map(({ id, label, tip, icon: Icon }) => (
@@ -36,7 +45,7 @@ export const PlayToolbar: React.FC<PlayToolbarProps> = ({ playMode, rating, onSe
       ))}
     </div>
 
-    <div className="play-strength">
+    <div className={`play-strength ${ratingLocked ? "is-locked" : ""}`}>
       {playMode === "human_sparring" && (
         <>
           <span className="play-strength__label">Maia rating</span>
@@ -46,6 +55,7 @@ export const PlayToolbar: React.FC<PlayToolbarProps> = ({ playMode, rating, onSe
                 key={r}
                 className={`segmented__btn num ${rating === r ? "is-active" : ""}`}
                 aria-pressed={rating === r}
+                disabled={ratingLocked && rating !== r}
                 onClick={() => onSetRating(r)}
               >
                 {r}
@@ -55,15 +65,16 @@ export const PlayToolbar: React.FC<PlayToolbarProps> = ({ playMode, rating, onSe
         </>
       )}
 
-      {playMode === "max_engine" && (
+      {(playMode === "max_engine" || playMode === "tricky_bot") && (
         <label className="strength-slider">
-          <span className="play-strength__label">Strength</span>
+          <span className="play-strength__label">{playMode === "tricky_bot" ? "Your rating" : "Stockfish rating"}</span>
           <input
             type="range"
             min={800}
             max={2800}
             step={200}
             value={rating}
+            disabled={ratingLocked}
             onChange={(e) => onSetRating(Number(e.target.value))}
             style={{ "--fill": `${((rating - 800) / 2000) * 100}%` } as React.CSSProperties}
           />
@@ -71,9 +82,14 @@ export const PlayToolbar: React.FC<PlayToolbarProps> = ({ playMode, rating, onSe
         </label>
       )}
 
-      {(playMode === "free_lab" || playMode === "tricky_bot") && (
-        <span className="pill">No rating in this mode</span>
+      {ratingLocked && (
+        <span className="pill pill--warn rating-lock" title="The rating stays fixed for the whole game. Start a new game to change it.">
+          <Lock size={12} aria-hidden="true" /> Locked for this game
+        </span>
       )}
+
+      {playMode === "free_lab" && <span className="pill">Free play, no rating</span>}
+      {playMode === "trap_puzzle" && <span className="pill">Find the refutation</span>}
     </div>
   </div>
 );

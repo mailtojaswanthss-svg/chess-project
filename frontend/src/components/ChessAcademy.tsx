@@ -199,8 +199,8 @@ export const ChessAcademy: React.FC<ChessAcademyProps> = ({ onPracticePosition, 
     <div className="view academy">
       <div className="page-head">
         <div>
-          <h1 className="page-title">Chess Academy</h1>
-          <p className="page-sub">Eight hand-picked positions across the four stages of a game. Load any of them into the lab and play it out.</p>
+          <h1 className="page-title">Lessons</h1>
+          <p className="page-sub">Eight hand-picked positions across the four stages of a game. Open any of them on the board and play it out.</p>
         </div>
       </div>
 
@@ -306,7 +306,7 @@ export const ChessAcademy: React.FC<ChessAcademyProps> = ({ onPracticePosition, 
                         onPracticePosition(lesson.fen, lesson.title);
                       }}
                     >
-                      <Play size={14} /> Load in Lab
+                      <Play size={14} /> Play this position
                     </button>
                   </article>
                 ))

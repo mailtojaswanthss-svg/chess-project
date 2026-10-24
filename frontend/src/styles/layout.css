@@ -4,11 +4,11 @@
 .app-shell {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 0 32px 48px;
+  padding: 0 32px 24px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .main-content {
@@ -18,7 +18,7 @@
 .view {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -51,22 +51,25 @@
   align-items: start;
 }
 
-.workspace:has(.board-size-compact) { --board-max: 520px; }
-.workspace:has(.board-size-large) { --board-max: 760px; }
+/* The board column scales with the window height so the whole board fits on screen
+   (392px is the header, toolbar, status bar, player strips and controls around it) */
+.workspace,
+.arena-page { --board-max: clamp(360px, calc(100svh - 392px), 620px); }
+.workspace:has(.board-size-compact),
+.arena-page:has(.board-size-compact) { --board-max: clamp(340px, calc(100svh - 392px), 520px); }
+.workspace:has(.board-size-large),
+.arena-page:has(.board-size-large) { --board-max: clamp(360px, calc(100svh - 392px), 760px); }
 
 .workspace__board {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   width: 100%;
   max-width: var(--board-max, 620px);
   justify-self: center;
 }
 
-.workspace__board.board-size-compact { --board-max: 520px; }
-.workspace__board.board-size-standard { --board-max: 620px; }
-.workspace__board.board-size-large { --board-max: 760px; }
 
 .workspace__side {
   display: grid;
@@ -247,11 +250,11 @@
 .btn--primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   border-color: transparent;
-  color: #04131f;
+  color: #12200d;
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7dd3fc, var(--accent));
+  background: linear-gradient(135deg, #c3e08d, var(--accent));
   border-color: transparent;
 }
 
@@ -272,7 +275,7 @@
 }
 
 .btn--danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.24);
+  background: rgba(229, 103, 90, 0.24);
   border-color: transparent;
 }
 
@@ -302,7 +305,7 @@
   gap: 4px;
   padding: 4px;
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(16, 24, 17, 0.7);
   border: 1px solid var(--border);
   max-width: 100%;
   overflow-x: auto;
@@ -337,7 +340,7 @@
 .segmented__btn.is-active {
   color: var(--text-1);
   background: var(--surface-3);
-  box-shadow: 0 0 0 1px var(--accent-ring), 0 6px 18px -8px rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 0 1px var(--accent-ring), 0 6px 18px -8px rgba(155, 196, 90, 0.6);
 }
 
 /* Native-tooltip-free hint, used on overlay toggles */
@@ -381,7 +384,7 @@
   position: relative;
   height: 6px;
   border-radius: var(--radius-pill);
-  background: rgba(148, 163, 184, 0.16);
+  background: rgba(176, 184, 152, 0.16);
   overflow: hidden;
 }
 
@@ -430,7 +433,7 @@
 }
 
 .data-table tbody tr:hover {
-  background: rgba(56, 189, 248, 0.05);
+  background: rgba(155, 196, 90, 0.05);
 }
 
 .data-table tbody tr:last-child td {
@@ -444,14 +447,28 @@
 /* Keep the arena toolbar aligned with the board + sidebar pair */
 .arena-page {
   width: 100%;
-  max-width: calc(620px + 400px + 32px);
+  max-width: calc(var(--board-max) + 400px + 32px);
   margin-inline: auto;
 }
 
-.arena-page:has(.board-size-compact) { max-width: calc(520px + 400px + 32px); }
-.arena-page:has(.board-size-large) { max-width: calc(760px + 400px + 32px); }
+/* Desktop arena: the sidebar scrolls on its own so the page ends with the board */
+@media (min-width: 900px) {
+  .arena .workspace__side {
+    max-height: calc(100svh - 200px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    margin-right: -4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-3) transparent;
+  }
+}
 
 @media (max-width: 1279px) {
+  .arena-page { max-width: calc(var(--board-max) + 340px + 24px); }
+}
+
+@media (max-width: 899px) {
   .arena-page { max-width: none; }
 }
 

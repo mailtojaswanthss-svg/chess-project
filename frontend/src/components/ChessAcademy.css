@@ -20,7 +20,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
-  animation: rise-in 480ms var(--ease-out) both;
+  animation: rise-in 480ms var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 70ms);
   transition: opacity var(--dur-med) var(--ease-out), filter var(--dur-med) var(--ease-out);
 }
@@ -110,7 +110,7 @@
   grid-template-columns: repeat(8, 1fr);
   aspect-ratio: 1;
   width: 100%;
-  max-width: 260px;
+  max-width: 220px;
   justify-self: center;
   border-radius: 8px;
   overflow: hidden;
@@ -121,7 +121,7 @@
 .mini-sq {
   display: grid;
   place-items: center;
-  font-size: calc(min(100cqi, 260px) / 10);
+  font-size: calc(min(100cqi, 220px) / 10);
   line-height: 1;
   background: var(--board-light);
   user-select: none;
@@ -137,7 +137,7 @@
 }
 
 .mini-sq.is-black {
-  color: #111827;
+  color: #141c15;
 }
 
 .lesson__head {
@@ -177,7 +177,7 @@
   gap: 6px;
   margin-top: 8px;
   list-style: none;
-  animation: slide-down var(--dur-med) var(--ease-out) both;
+  animation: slide-down var(--dur-med) var(--ease-out) backwards;
 }
 
 .lesson__points li {

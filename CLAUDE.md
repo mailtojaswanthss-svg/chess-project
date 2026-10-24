@@ -33,6 +33,9 @@ Run from the repo root unless noted.
 - Grid containers need `grid-template-columns: minmax(0, 1fr)`. Implicit `auto` tracks grow to their widest child and cause sideways scrolling on phones.
 - Arena layout: `components/arena/` (`ArenaView` takes slot props; the sidebar cards are `OutlookCard`, `CoachCard`, `ThreatRadarCard`). Review lives in `components/review/`.
 - Candidate-move scores from the API are from the side to move's point of view. Convert them to White's before showing an eval.
+- Entrance animations use `animation-fill-mode: backwards`, never `both`/`forwards`, when they animate `transform`. A transform that persists on an ancestor of a board becomes the containing block for `position: fixed` children and offsets react-chessboard's drag ghost from the cursor.
+- The palette is derived from the board (green `#769656`, cream `#eeeed2`); add colours as tokens in `styles/tokens.css`. Move-quality badge colours in `utils/chessUtils.ts` deliberately follow the usual chess-site convention.
+- Each arena mode (`PlayMode`) keeps its own game in `sessionsRef` in `App.tsx`; switching modes parks one and restores the other. A rated game's rating is locked until it ends or a new game starts. Trap puzzles (`utils/useTrapPuzzles.ts`) skip engine analysis so the answer isn't shown.
 
 ## Skills and MCP
 

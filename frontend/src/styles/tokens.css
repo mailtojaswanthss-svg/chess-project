@@ -3,40 +3,43 @@
 :root {
   color-scheme: dark;
 
-  /* Surfaces: night-board navy, lifted in three steps */
-  --surface-0: #0b0f17;
-  --surface-1: rgba(17, 24, 39, 0.82);
-  --surface-2: rgba(30, 41, 59, 0.72);
-  --surface-3: rgba(51, 65, 85, 0.55);
-  --surface-solid: #111827;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  /* Surfaces: deep forest felt, lifted in three steps (palette taken from the board) */
+  --surface-0: #0d130e;
+  --surface-1: rgba(22, 32, 23, 0.86);
+  --surface-2: rgba(37, 52, 38, 0.72);
+  --surface-3: rgba(62, 82, 60, 0.6);
+  --surface-solid: #151e16;
+  --border: rgba(238, 238, 210, 0.08);
+  --border-strong: rgba(238, 238, 210, 0.16);
 
-  /* Text */
-  --text-1: #f8fafc;
-  --text-2: #cbd5e1;
-  --text-3: #8a9ab3;
+  /* Text: cream from the light squares */
+  --text-1: #f2f1e1;
+  --text-2: #cdd1b8;
+  --text-3: #8d9783;
 
-  /* Accents */
-  --accent: #38bdf8;
-  --accent-strong: #0ea5e9;
-  --accent-soft: rgba(56, 189, 248, 0.14);
-  --accent-ring: rgba(56, 189, 248, 0.45);
-  --good: #10b981;
-  --good-soft: rgba(16, 185, 129, 0.14);
-  --warn: #f59e0b;
-  --warn-soft: rgba(245, 158, 11, 0.14);
-  --danger: #ef4444;
-  --danger-soft: rgba(239, 68, 68, 0.14);
-  --violet: #a78bfa;
-  --violet-soft: rgba(167, 139, 250, 0.14);
-  --gold: #fbbf24;
+  /* Accents: the board's green, brightened for contrast on dark */
+  --accent: #9bc45a;
+  --accent-strong: #769656;
+  --accent-soft: rgba(155, 196, 90, 0.15);
+  --accent-ring: rgba(155, 196, 90, 0.5);
+  --on-accent: #12200d;
+  --cream: #eeeed2;
+  --cream-soft: rgba(238, 238, 210, 0.12);
+  --good: #5fd08a;
+  --good-soft: rgba(95, 208, 138, 0.14);
+  --warn: #e8b44c;
+  --warn-soft: rgba(232, 180, 76, 0.15);
+  --danger: #e5675a;
+  --danger-soft: rgba(229, 103, 90, 0.15);
+  --violet: #b49ce6;
+  --violet-soft: rgba(180, 156, 230, 0.15);
+  --gold: #e7c66b;
 
   /* Board colours (match react-chessboard squares) */
   --board-light: #eeeed2;
   --board-dark: #769656;
   --piece-white: #f1f5f9;
-  --piece-black: #0f172a;
+  --piece-black: #101811;
 
   /* Legacy aliases kept for the migrated component sheets */
   --bg-primary: var(--surface-0);
@@ -75,13 +78,13 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
-  --card-pad: 20px 24px;
-  --card-gap: 16px;
+  --card-pad: 16px 20px;
+  --card-gap: 12px;
   --radius-sm: 8px;
   --radius-lg: 14px;
   --radius-pill: 999px;
-  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px -18px rgba(0, 0, 0, 0.7);
-  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 18px 40px -16px rgba(0, 0, 0, 0.75);
+  --shadow-card: 0 1px 0 rgba(238, 238, 210, 0.04) inset, 0 10px 28px -18px rgba(0, 0, 0, 0.75);
+  --shadow-lift: 0 1px 0 rgba(238, 238, 210, 0.07) inset, 0 18px 40px -16px rgba(0, 0, 0, 0.8);
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);

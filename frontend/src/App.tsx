@@ -296,10 +296,10 @@ export default function App() {
     [rating]
   );
 
-  // Initial analysis
+  // Analyse on mount and again whenever the rating changes, so requests never carry a stale rating
   useEffect(() => {
     void analyzePosition(game);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [analyzePosition]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Request Engine Opponent Move (Stockfish / Trap / Maia)
   const requestBotMove = useCallback(
@@ -696,10 +696,9 @@ export default function App() {
       if (!res.ok) throw new Error(body.detail ?? "Could not analyze uploaded PGN.");
       const report = body as GameReport;
       setGameReport(report);
+      setIsReviewingGame(true);
       if (report.moves.length > 0) {
-        const first = report.moves[0];
-        setSelectedReviewPly(first.ply);
-        setGame(new Chess(first.fen));
+        selectReviewPly(report, report.moves[0].ply);
       }
       showToast("Game PGN successfully analyzed");
     } catch (err) {
@@ -729,16 +728,15 @@ export default function App() {
   }, [playMode, game, isBotThinking, requestBotMove]);
 
   // Jump to move in Review
-  const handleSelectReviewPly = (ply: number) => {
-    if (!gameReport) return;
+  const selectReviewPly = (report: GameReport, ply: number) => {
     if (ply === 0) {
       setSelectedReviewPly(0);
-      const startFen = gameReport.moves[0]?.fen ?? STARTING_FEN;
+      const startFen = report.moves[0]?.fen ?? STARTING_FEN;
       setReviewGame(new Chess(startFen));
       playSound("move");
       return;
     }
-    const moveItem = gameReport.moves.find((m) => m.ply === ply);
+    const moveItem = report.moves.find((m) => m.ply === ply);
     if (!moveItem) return;
     setSelectedReviewPly(ply);
     const revBoard = new Chess(moveItem.fen);
@@ -749,6 +747,10 @@ export default function App() {
     }
     setReviewGame(revBoard);
     playSound("move");
+  };
+
+  const handleSelectReviewPly = (ply: number) => {
+    if (gameReport) selectReviewPly(gameReport, ply);
   };
 
   // Export Blunder practice FENs
@@ -801,7 +803,7 @@ export default function App() {
       const report = body as GameReport;
       setGameReport(report);
       if (report.moves.length > 0) {
-        handleSelectReviewPly(report.moves[0].ply);
+        selectReviewPly(report, report.moves[0].ply);
       }
       showToast("Game review loaded with CAPS accuracy");
     } catch (err) {
@@ -1029,7 +1031,6 @@ export default function App() {
                       onClick={() => {
                         setRating(r);
                         playSound("click");
-                        void analyzePosition(game);
                       }}
                     >
                       {r}
@@ -1056,7 +1057,6 @@ export default function App() {
                   onChange={(e) => {
                     const nextRating = Number(e.target.value);
                     setRating(nextRating);
-                    void analyzePosition(game);
                   }}
                   className="stockfish-rating-slider"
                   title="Adjust Stockfish Engine Strength"
@@ -1378,9 +1378,7 @@ export default function App() {
               <div className="review-board-wrap">
                 <div className="board-wrapper">
                   <EvaluationBar
-                    evaluationCentipawns={
-                      gameReport.moves.find((m) => m.ply === selectedReviewPly)?.evaluation_loss_centipawns ?? null
-                    }
+                    evaluationCentipawns={null}
                     isFlipped={isFlipped}
                   />
                   <div className="board-inner">

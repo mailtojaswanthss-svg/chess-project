@@ -178,7 +178,7 @@ def test_analyze_game_returns_caps_and_badges(fake_backends):
     assert "badge_symbol" in first_move
 
 
-def test_tactical_analysis_endpoints():
+def test_tactical_analysis_endpoints(fake_backends):
     client = TestClient(app)
     # Standard starting board
     response = client.post(
@@ -292,3 +292,98 @@ def test_coach_advice_explains_detected_pin(no_backends):
     resp = TestClient(app).post("/coach-advice", json={"fen": pin_fen, "rating": 1200})
     assert resp.status_code == 200
     assert "pin" in resp.json()["tactical_tags"]
+
+
+def test_tactical_analysis_reports_missing_backends_instead_of_guessing(no_backends):
+    resp = TestClient(app).post("/tactical-analysis", json={"fen": chess.STARTING_FEN, "rating": 1200})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["risk_source"] == "unavailable"
+    assert data["eval_source"] == "unavailable"
+    assert data["overall_blunder_probability"] is None
+    assert data["risk_band"] is None
+    assert data["win_chances"] is None
+    assert data["evaluation_centipawns"] is None
+    assert data["candidate_moves"] == []
+
+
+def test_tactical_analysis_with_backends_reports_sources(fake_backends):
+    data = TestClient(app).post(
+        "/tactical-analysis", json={"fen": chess.STARTING_FEN, "rating": 1200}
+    ).json()
+    assert data["risk_source"] == "model"
+    assert data["eval_source"] == "engine"
+    assert data["overall_blunder_probability"] == pytest.approx(0.2)
+    # FakeEvaluator scores e4/d4/Nf3 at 30/20/10 cp: White's view at the start
+    assert data["evaluation_centipawns"] == 30
+    assert [c["classification"] for c in data["candidate_moves"]] == ["best", "good", "good"]
+    assert all(c["blunder_probability"] == pytest.approx(0.2) for c in data["candidate_moves"])
+
+
+def test_tactical_analysis_stalemate_is_a_certain_draw():
+    stalemate_fen = "7k/5Q2/6K1/8/8/8/8/8 b - - 0 1"
+    data = TestClient(app).post("/tactical-analysis", json={"fen": stalemate_fen, "rating": 1200}).json()
+    assert data["win_chances"] == {"white": 0.0, "draw": 1.0, "black": 0.0}
+    assert data["evaluation_centipawns"] == 0
+
+
+def test_classify_loss_thresholds():
+    assert [api._classify_loss(x) for x in (0, 35, 36, 90, 91, 200, 201)] == [
+        "best", "good", "inaccuracy", "inaccuracy", "mistake", "mistake", "blunder"
+    ]
+
+
+def test_position_analysis_logs_engine_failure(monkeypatch, tmp_path, caplog):
+    engine_file = tmp_path / "stockfish"
+    engine_file.touch()
+    monkeypatch.setattr(settings, "model_path", tmp_path / "missing.joblib")
+    monkeypatch.setattr(settings, "stockfish_path", engine_file)
+
+    class BrokenEvaluator(FakeEvaluator):
+        def __enter__(self):
+            raise api.EngineConfigurationError("boom")
+
+    monkeypatch.setattr(api, "StockfishEvaluator", BrokenEvaluator)
+    with caplog.at_level("WARNING"):
+        result = api._analyze_position(chess.Board(), 1200)
+    assert result.eval_centipawns is None
+    assert "without engine candidates" in caplog.text
+
+
+def test_health_reports_engine_and_maia(no_backends):
+    data = TestClient(app).get("/health").json()
+    assert data["engine_ready"] is False
+    assert isinstance(data["maia_available"], bool)
+
+
+def test_blunder_dna_without_games_is_flagged_as_sample():
+    data = TestClient(app).post("/blunder-dna", json={}).json()
+    assert data["is_sample"] is True
+    assert data["positions_analyzed"] == 0
+
+
+def test_blunder_dna_counts_only_the_players_side():
+    # 1.e4 e5 2.Qh5 Nc6 3.Qxe5+: after 2.Qh5 Black's e5 pawn is loose; White's pieces never are
+    pgn = "1. e4 e5 2. Qh5 Nc6 *"
+    as_white = TestClient(app).post("/blunder-dna", json={"games": [{"pgn": pgn, "player_color": "w"}]}).json()
+    as_black = TestClient(app).post("/blunder-dna", json={"games": [{"pgn": pgn, "player_color": "b"}]}).json()
+    assert as_white["is_sample"] is False
+    assert as_white["positions_analyzed"] == 2
+    assert as_black["positions_analyzed"] == 2
+    assert as_white["dimensions"]["hanging_pieces"] == 0
+    assert as_black["dimensions"]["hanging_pieces"] == 50
+
+
+def test_blunder_dna_dimensions_are_plain_rates():
+    data = TestClient(app).post(
+        "/blunder-dna", json={"games": [{"pgn": "1. d4 d5 *", "player_color": "w"}]}
+    ).json()
+    # One quiet White position: nothing loose, pinned or overloaded, and no 10% floor
+    assert data["dimensions"]["hanging_pieces"] == 0
+    assert data["dimensions"]["pins"] == 0
+    assert data["resilience_score"] <= 100
+
+
+def test_blunder_dna_rejects_too_many_fens():
+    resp = TestClient(app).post("/blunder-dna", json={"fens": [chess.STARTING_FEN] * 201})
+    assert resp.status_code == 422

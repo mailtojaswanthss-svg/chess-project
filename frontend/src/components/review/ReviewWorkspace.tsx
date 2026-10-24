@@ -39,7 +39,7 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
     <div className="page-head">
       <div>
         <h1 className="page-title">Game review</h1>
-        <p className="page-sub">CAPS accuracy and a move-by-move breakdown. Step through moves on the right.</p>
+        <p className="page-sub">Accuracy, estimated performance and a move-by-move breakdown. Step through moves on the right.</p>
       </div>
       <button className="btn" onClick={onExit}>
         <ArrowLeft size={15} /> Back to the arena

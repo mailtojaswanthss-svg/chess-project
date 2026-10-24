@@ -154,3 +154,18 @@
     display: none;
   }
 }
+
+.hud-risk__unit {
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.hud-risk--none {
+  gap: 8px;
+}
+
+@container (max-width: 520px) {
+  .hud-risk__unit {
+    display: none;
+  }
+}

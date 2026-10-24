@@ -291,7 +291,7 @@ export default function App() {
         });
         setEngineEvaluation(data.evaluation_centipawns);
 
-        if (data.overall_blunder_probability >= 0.65) {
+        if ((data.overall_blunder_probability ?? 0) >= 0.65) {
           playSound("blunder");
         }
       } catch (err) {
@@ -1228,7 +1228,9 @@ export default function App() {
     showToast("Archive cleared");
   };
 
-  const riskScore = analysis?.blunder_probability ?? tacticalAnalysis?.overall_blunder_probability ?? 0;
+  const riskScore = analysis?.blunder_probability ?? tacticalAnalysis?.overall_blunder_probability ?? null;
+  const riskUnavailable = tacticalAnalysis?.risk_source === "unavailable" && riskScore === null;
+  const evalUnavailable = tacticalAnalysis?.eval_source === "unavailable";
   const isLive = !completedGameSummary;
   const opponentAvatar =
     playMode === "max_engine" ? "⚡" : playMode === "tricky_bot" ? "🪤" : playMode === "human_sparring" ? "🧠" : "🧪";
@@ -1297,6 +1299,7 @@ export default function App() {
                       fen={game.fen()}
                       moveCount={history.length}
                       riskScore={playMode === "trap_puzzle" ? null : riskScore}
+                      riskUnavailable={playMode !== "trap_puzzle" && riskUnavailable}
                       isCheck={isCheck}
                       isAnalyzing={isAnalyzing}
                     >
@@ -1330,6 +1333,7 @@ export default function App() {
                     boardRef={boardContainerRef}
                     isFlipped={isFlipped}
                     evaluationCentipawns={engineEvaluation}
+                    evalUnavailable={evalUnavailable && engineEvaluation === null}
                     turn={isLive ? sideToMove : undefined}
                     isCheck={isCheck}
                     squareStyles={customSquareStyles}
@@ -1387,6 +1391,7 @@ export default function App() {
                   <OutlookCard
                     key="outlook"
                     winChances={tacticalAnalysis?.win_chances}
+                    evalUnavailable={evalUnavailable}
                     isCheck={isCheck}
                     moveCount={history.length}
                     riskScore={riskScore}
@@ -1398,13 +1403,14 @@ export default function App() {
                     candidateMoves={tacticalAnalysis?.candidate_moves ?? []}
                     sideToMove={(tacticalAnalysis?.side_to_move ?? "White") === "White" ? "w" : "b"}
                     isLoading={isAnalyzing}
+                    engineUnavailable={evalUnavailable}
                     onHoverCandidateMove={setHoveredCandidateMove}
                     hoveredUci={hoveredCandidateMove}
                   />,
                   <CoachCard
                     key="coach"
                     coachAdvice={coachAdvice}
-                    fallbackText={tacticalAnalysis?.coach_explanation ?? riskFor(riskScore).description}
+                    fallbackText={tacticalAnalysis?.coach_explanation ?? (riskScore !== null ? riskFor(riskScore).description : "Play a move to get coaching on the position.")}
                     onFetchCoachAdvice={handleFetchCoachAdvice}
                     isFetchingCoachAdvice={isFetchingCoachAdvice}
                     disabled={!isLive}

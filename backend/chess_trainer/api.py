@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 import logging
 from pathlib import Path
 import math
@@ -10,12 +11,12 @@ from pydantic import BaseModel, Field
 
 from .config import settings
 from .analysis import analyze_pgn, risk_band
-from .engine import EngineConfigurationError, StockfishEvaluator
+from .engine import EngineConfigurationError, StockfishEvaluator, engine_ready, shutdown_engines
 from .features import extract_features
 from .model import BlunderModel
-from .maia import MaiaConfigurationError, MaiaEngine
+from .maia import MaiaConfigurationError, MaiaEngine, maia_installed
 from .territory import compute_territory_control, TerritoryControlResponse
-from .profiler import compute_blunder_dna, BlunderDnaResponse
+from .profiler import compute_blunder_dna, BlunderDnaResponse, DnaGame
 from .traps import get_all_traps, get_trap_by_id, TrapDrill
 from .coach import CoachExplanation, build_tactical_context, generate_agentic_coach_advice
 
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI):
     if settings.stockfish_path and not settings.stockfish_path.exists():
         logger.warning(f"Stockfish executable not found at configured path: {settings.stockfish_path}")
     yield
+    shutdown_engines()
 
 
 app = FastAPI(title="Chess Blunder Trainer", version="0.1.0", lifespan=lifespan)
@@ -143,6 +145,8 @@ def health() -> dict[str, object]:
         "model_loaded": settings.model_path.exists(),
         "model_train_samples": model_samples,
         "model_metrics": model_metrics,
+        "engine_ready": engine_ready(settings.stockfish_path),
+        "maia_available": maia_installed(),
     }
 
 
@@ -323,9 +327,11 @@ class ThreatItem(BaseModel):
 class CandidateMove(BaseModel):
     san: str
     uci: str
+    # Side to move's point of view
     centipawns: int
     loss_centipawns: int
-    blunder_probability: float
+    # Chance the opponent blunders in the position after this move; None without a model
+    blunder_probability: float | None
     classification: str
 
 
@@ -337,13 +343,97 @@ class TacticalAnalysisRequest(BaseModel):
 class TacticalAnalysisResponse(BaseModel):
     fen: str
     side_to_move: str
-    overall_blunder_probability: float
-    risk_band: str
+    # Chance the side to move plays a move losing >= blunder_loss_centipawns; None without a model
+    overall_blunder_probability: float | None
+    risk_band: str | None
     threats: list[ThreatItem]
     candidate_moves: list[CandidateMove]
     coach_explanation: str
-    win_chances: dict[str, float]
-    evaluation_centipawns: int
+    # Estimated from the engine eval (see _calculate_win_chances); None without an engine
+    win_chances: dict[str, float] | None
+    # White's point of view; None without an engine
+    evaluation_centipawns: int | None
+    risk_source: str = "model"
+    eval_source: str = "engine"
+
+
+def _classify_loss(loss: int) -> str:
+    if loss == 0:
+        return "best"
+    if loss <= 35:
+        return "good"
+    if loss <= 90:
+        return "inaccuracy"
+    if loss <= 200:
+        return "mistake"
+    return "blunder"
+
+
+@dataclass
+class PositionAnalysis:
+    threats: list[ThreatItem]
+    candidate_moves: list[CandidateMove] = field(default_factory=list)
+    # Side to move's point of view
+    eval_centipawns: int | None = None
+    blunder_probability: float | None = None
+
+    @property
+    def risk_source(self) -> str:
+        return "model" if self.blunder_probability is not None else "unavailable"
+
+    @property
+    def eval_source(self) -> str:
+        return "engine" if self.eval_centipawns is not None else "unavailable"
+
+
+def _analyze_position(board: chess.Board, rating: int, candidate_count: int = 3) -> PositionAnalysis:
+    """Threats, engine candidates and blunder risk for a live position.
+
+    Shared by /tactical-analysis and /coach-advice. Missing backends leave
+    their fields as None rather than inventing a number.
+    """
+    analysis = PositionAnalysis(threats=_detect_tactical_threats(board))
+
+    model: BlunderModel | None = None
+    if settings.model_path.exists():
+        try:
+            model = get_blunder_model()
+            analysis.blunder_probability = float(model.predict_probability(extract_features(board, rating)))
+        except HTTPException as exc:
+            logger.warning("Position analysis continuing without blunder model: %s", exc.detail)
+            model = None
+
+    if settings.stockfish_path is None or not settings.stockfish_path.exists():
+        return analysis
+    try:
+        with StockfishEvaluator(settings.stockfish_path, depth=8) as evaluator:
+            raw_candidates = evaluator.candidate_moves(board, count=candidate_count)
+    except (OSError, EngineConfigurationError) as exc:
+        logger.warning("Position analysis continuing without engine candidates: %s", exc)
+        return analysis
+    if not raw_candidates:
+        return analysis
+
+    best_score = raw_candidates[0][1]
+    analysis.eval_centipawns = best_score
+    for move, score in raw_candidates:
+        loss = max(0, best_score - score)
+        reply_risk: float | None = None
+        if model is not None:
+            after = board.copy(stack=False)
+            after.push(move)
+            reply_risk = 0.0 if after.is_game_over() else float(model.predict_probability(extract_features(after, rating)))
+        analysis.candidate_moves.append(
+            CandidateMove(
+                san=board.san(move),
+                uci=move.uci(),
+                centipawns=score,
+                loss_centipawns=loss,
+                blunder_probability=reply_risk,
+                classification=_classify_loss(loss),
+            )
+        )
+    return analysis
 
 
 def _calculate_win_chances(eval_centipawns: int, turn: chess.Color) -> dict[str, float]:
@@ -455,13 +545,17 @@ def tactical_analysis(request: TacticalAnalysisRequest) -> TacticalAnalysisRespo
 
     if board.is_game_over():
         outcome = board.outcome()
-        explanation = "The game is over."
-        if outcome:
-            if outcome.winner is None:
-                explanation = "Game drawn by stalemate or insufficient material."
-            else:
-                winner_str = "White" if outcome.winner == chess.WHITE else "Black"
-                explanation = f"Checkmate! {winner_str} won the game."
+        winner = outcome.winner if outcome else None
+        if winner is None:
+            explanation = "Game drawn by stalemate or insufficient material."
+            win_chances = {"white": 0.0, "draw": 1.0, "black": 0.0}
+            final_eval = 0
+        else:
+            winner_str = "White" if winner == chess.WHITE else "Black"
+            explanation = f"Checkmate! {winner_str} won the game."
+            white_won = winner == chess.WHITE
+            win_chances = {"white": 1.0 if white_won else 0.0, "draw": 0.0, "black": 0.0 if white_won else 1.0}
+            final_eval = 9999 if white_won else -9999
 
         return TacticalAnalysisResponse(
             fen=board.fen(),
@@ -471,103 +565,42 @@ def tactical_analysis(request: TacticalAnalysisRequest) -> TacticalAnalysisRespo
             threats=[],
             candidate_moves=[],
             coach_explanation=explanation,
-            win_chances={"white": 0.5, "draw": 0.0, "black": 0.5} if not outcome or outcome.winner is None else {"white": 1.0, "draw": 0.0, "black": 0.0} if outcome.winner == chess.WHITE else {"white": 0.0, "draw": 0.0, "black": 1.0},
-            evaluation_centipawns=0 if not outcome or outcome.winner is None else 9999 if outcome.winner == chess.WHITE else -9999,
+            win_chances=win_chances,
+            evaluation_centipawns=final_eval,
+            risk_source="final",
+            eval_source="final",
         )
 
-    overall_prob = 0.2
-    model = None
-    if settings.model_path.exists():
-        try:
-            model = get_blunder_model()
-            overall_prob = float(model.predict_probability(extract_features(board, request.rating)))
-        except Exception:
-            model = None
-
-    threats = _detect_tactical_threats(board)
-    candidate_moves: list[CandidateMove] = []
-    eval_centipawns = 0
-
-    if settings.stockfish_path is not None and settings.stockfish_path.exists():
-        try:
-            with StockfishEvaluator(settings.stockfish_path, depth=8) as evaluator:
-                raw_candidates = evaluator.candidate_moves(board, count=3)
-                if raw_candidates:
-                    best_score = raw_candidates[0][1]
-                    eval_centipawns = best_score
-
-                    for move, score in raw_candidates:
-                        loss = max(0, best_score - score)
-                        if loss == 0:
-                            classification = "best"
-                        elif loss <= 35:
-                            classification = "good"
-                        elif loss <= 90:
-                            classification = "inaccuracy"
-                        elif loss <= 200:
-                            classification = "mistake"
-                        else:
-                            classification = "blunder"
-
-                        c_prob = overall_prob
-                        if model is not None:
-                            cand_board = board.copy(stack=False)
-                            cand_board.push(move)
-                            if cand_board.is_game_over():
-                                c_prob = 0.0
-                            else:
-                                c_prob = float(model.predict_probability(extract_features(cand_board, request.rating)))
-
-                        candidate_moves.append(
-                            CandidateMove(
-                                san=board.san(move),
-                                uci=move.uci(),
-                                centipawns=score,
-                                loss_centipawns=loss,
-                                blunder_probability=c_prob,
-                                classification=classification,
-                            )
-                        )
-        except Exception:
-            pass
-
-    if not candidate_moves:
-        for legal_move in list(board.legal_moves)[:3]:
-            candidate_moves.append(
-                CandidateMove(
-                    san=board.san(legal_move),
-                    uci=legal_move.uci(),
-                    centipawns=0,
-                    loss_centipawns=0,
-                    blunder_probability=overall_prob,
-                    classification="good",
-                )
-            )
-
-    win_chances = _calculate_win_chances(eval_centipawns, board.turn)
+    analysis = _analyze_position(board, request.rating)
+    threats = analysis.threats
+    candidate_moves = analysis.candidate_moves
+    overall_prob = analysis.blunder_probability
 
     if board.is_check():
         coach_explanation = "King is under direct check! Calculate responses precisely to avoid tactical collapse."
     elif threats:
         top_threat = threats[0]
         coach_explanation = f"Tactical radar alert: {top_threat.description}. Be vigilant before committing piece moves."
-    elif overall_prob >= 0.65:
+    elif overall_prob is not None and overall_prob >= 0.65:
         coach_explanation = f"High blunder risk ({round(overall_prob * 100)}%): Sharp tactical tensions detected. Calculate forced responses."
     elif candidate_moves and candidate_moves[0].classification == "best":
         coach_explanation = f"Recommended continuation is {candidate_moves[0].san} to maintain initiative and positional stability."
     else:
         coach_explanation = "Position is solid. Harmonize your pieces and safeguard king safety."
 
+    eval_cp = analysis.eval_centipawns
     return TacticalAnalysisResponse(
         fen=board.fen(),
         side_to_move=side_label,
         overall_blunder_probability=overall_prob,
-        risk_band=_risk_band(overall_prob),
+        risk_band=_risk_band(overall_prob) if overall_prob is not None else None,
         threats=threats,
         candidate_moves=candidate_moves,
         coach_explanation=coach_explanation,
-        win_chances=win_chances,
-        evaluation_centipawns=eval_centipawns if board.turn == chess.WHITE else -eval_centipawns,
+        win_chances=_calculate_win_chances(eval_cp, board.turn) if eval_cp is not None else None,
+        evaluation_centipawns=(eval_cp if board.turn == chess.WHITE else -eval_cp) if eval_cp is not None else None,
+        risk_source=analysis.risk_source,
+        eval_source=analysis.eval_source,
     )
 
 
@@ -585,14 +618,17 @@ def territory_control(request: TerritoryRequest) -> TerritoryControlResponse:
 
 
 class BlunderDnaRequest(BaseModel):
-    pgn_text: str | None = None
-    fens: list[str] | None = None
+    # Preferred: each game with the colour the user played, so only their positions count
+    games: list[DnaGame] | None = Field(default=None, max_length=500)
+    # Legacy: one PGN blob; both sides' positions are counted
+    pgn_text: str | None = Field(default=None, max_length=500_000)
+    fens: list[str] | None = Field(default=None, max_length=200)
 
 
 @app.post("/blunder-dna", response_model=BlunderDnaResponse)
 def blunder_dna(request: BlunderDnaRequest) -> BlunderDnaResponse:
     pgns = [request.pgn_text] if request.pgn_text else None
-    return compute_blunder_dna(pgn_texts=pgns, fens=request.fens)
+    return compute_blunder_dna(pgn_texts=pgns, fens=request.fens, games=request.games)
 
 
 @app.get("/trap-puzzles", response_model=list[TrapDrill])
@@ -623,48 +659,18 @@ def coach_advice(req: CoachAdviceRequest) -> CoachExplanation:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"Invalid FEN: {exc}") from exc
 
-    threats = _detect_tactical_threats(board)
-    candidate_moves: list[CandidateMove] = []
-    eval_centipawns = 0
-
-    if settings.stockfish_path is not None and settings.stockfish_path.exists():
-        try:
-            with StockfishEvaluator(settings.stockfish_path, depth=8) as evaluator:
-                raw_candidates = evaluator.candidate_moves(board, count=3)
-                if raw_candidates:
-                    eval_centipawns = raw_candidates[0][1]
-                    for move, score in raw_candidates:
-                        loss = max(0, eval_centipawns - score)
-                        candidate_moves.append(
-                            CandidateMove(
-                                uci=move.uci(),
-                                san=board.san(move),
-                                centipawns=score,
-                                loss_centipawns=loss,
-                                classification="best" if loss == 0 else "good" if loss <= 35 else "mistake",
-                                blunder_probability=0.15,
-                            )
-                        )
-        except (OSError, EngineConfigurationError) as exc:
-            logger.warning("Coach advice continuing without engine candidates: %s", exc)
-
-    overall_prob = 0.15
-    if settings.model_path.exists():
-        try:
-            model = get_blunder_model()
-            overall_prob = model.predict_probability(extract_features(board, req.rating))
-        except HTTPException as exc:
-            logger.warning("Coach advice continuing without blunder model: %s", exc.detail)
+    analysis = _analyze_position(board, req.rating)
+    overall_prob = analysis.blunder_probability
 
     ctx = build_tactical_context(
         board=board,
-        engine_eval_cp=eval_centipawns,
+        engine_eval_cp=analysis.eval_centipawns,
         blunder_probability=overall_prob,
-        risk_band=_risk_band(overall_prob),
+        risk_band=_risk_band(overall_prob) if overall_prob is not None else "unknown",
         opening_name=req.opening_name or "Standard Opening",
         archetype=req.archetype,
-        candidate_moves=candidate_moves,
-        threats=threats,
+        candidate_moves=analysis.candidate_moves,
+        threats=analysis.threats,
     )
 
     return generate_agentic_coach_advice(ctx, api_key=req.api_key)

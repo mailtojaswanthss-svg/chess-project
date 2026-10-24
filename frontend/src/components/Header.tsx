@@ -51,7 +51,18 @@ export const Header: React.FC<HeaderProps> = ({
   isDark,
   onToggleTheme,
 }) => {
-  const isModelActive = modelHealth?.model_loaded ?? false;
+  const backendUp = modelHealth !== null;
+  const missing = [
+    !(modelHealth?.engine_ready ?? false) && "Stockfish",
+    !(modelHealth?.model_loaded ?? false) && "the blunder model",
+  ].filter(Boolean) as string[];
+  const fullyOnline = backendUp && missing.length === 0;
+  const statusText = !backendUp ? "Connecting" : fullyOnline ? "Engine online" : "Limited";
+  const statusTitle = !backendUp
+    ? "Backend offline or still connecting"
+    : fullyOnline
+      ? `Backend connected · Stockfish ready · model trained on ${modelHealth?.model_train_samples?.toLocaleString() ?? 0} samples`
+      : `Backend connected, but ${missing.join(" and ")} ${missing.length > 1 ? "aren't" : "isn't"} available, so some numbers show "—"`;
   const navRef = useRef<HTMLElement>(null);
 
   // Slide the active-tab indicator to the selected tab; CSS transitions the move.
@@ -109,15 +120,11 @@ export const Header: React.FC<HeaderProps> = ({
 
       <div className="topbar-actions">
         <span
-          className={`engine-status ${isModelActive ? "is-online" : ""}`}
-          title={
-            isModelActive
-              ? `Backend connected · model trained on ${modelHealth?.model_train_samples?.toLocaleString() ?? 0} samples`
-              : "Backend offline or still connecting"
-          }
+          className={`engine-status ${fullyOnline ? "is-online" : ""}`}
+          title={statusTitle}
         >
           <span className="live-dot" />
-          <span className="engine-status__text">{isModelActive ? "Engine online" : "Connecting"}</span>
+          <span className="engine-status__text">{statusText}</span>
         </span>
         <button
           className="btn btn--ghost btn--icon theme-toggle"

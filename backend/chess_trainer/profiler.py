@@ -2,13 +2,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import StringIO
+import logging
+from typing import Literal
+
 import chess
 import chess.pgn
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
+
+# Positions after this ply (move 25) count as the late game
+LATE_GAME_PLY = 50
+
 
 class BlunderDnaDimensions(BaseModel):
-    pins: int  # 0 to 100 weakness index
+    """Each value is a plain rate, 0-100: the % of the player's positions
+    (just before they moved) where that weakness was on the board.
+    time_scramble is the % of their late-game positions (after move 25) with a
+    loose piece; there is no clock data, so it stands in for time pressure."""
+
+    pins: int
     hanging_pieces: int
     overloaded_defenders: int
     back_rank: int
@@ -30,10 +43,20 @@ class TacticalArchetype(BaseModel):
 class BlunderDnaResponse(BaseModel):
     dimensions: BlunderDnaDimensions
     archetype: TacticalArchetype
-    resilience_score: int  # 0 to 100 overall tactical fitness
+    resilience_score: int  # 100 minus the average of the six rates
     games_analyzed: int
+    # Positions with a loose piece or a defender guarding 2+ attacked pieces
     blunders_detected: int
     critical_advice: list[str]
+    positions_analyzed: int = 0
+    # True when no games were given and the profile is a fixed example
+    is_sample: bool = False
+
+
+class DnaGame(BaseModel):
+    pgn: str
+    # Only this side's positions are counted; None counts both sides
+    player_color: Literal["w", "b"] | None = None
 
 
 def _detect_position_weaknesses(board: chess.Board, ply: int) -> dict[str, int]:
@@ -236,65 +259,69 @@ def classify_archetype(dims: BlunderDnaDimensions) -> TacticalArchetype:
     )
 
 
+def _rate(count: int, total: int) -> int:
+    return round(100 * count / total) if total else 0
+
+
 def compute_blunder_dna(
     pgn_texts: list[str] | None = None,
     fens: list[str] | None = None,
+    games: list[DnaGame] | None = None,
 ) -> BlunderDnaResponse:
-    total_positions = 0
-    agg = {
-        "pins": 0,
-        "hanging": 0,
-        "overloaded": 0,
-        "back_rank": 0,
-        "time_scramble": 0,
-        "pawn_structure": 0,
-    }
+    all_games = list(games or []) + [DnaGame(pgn=text) for text in (pgn_texts or [])]
+
+    positions = 0
+    late_positions = 0
+    present = {"pins": 0, "hanging": 0, "overloaded": 0, "back_rank": 0, "pawn_structure": 0}
+    late_slips = 0
     games_count = 0
-    blunders_count = 0
+    risky_count = 0
 
-    if pgn_texts:
-        for pgn_text in pgn_texts:
-            if not pgn_text.strip():
-                continue
+    def record(board: chess.Board, ply: int) -> None:
+        nonlocal positions, late_positions, late_slips, risky_count
+        weaknesses = _detect_position_weaknesses(board, ply)
+        positions += 1
+        for key in present:
+            if weaknesses[key] >= 1:
+                present[key] += 1
+        if weaknesses["hanging"] >= 1 or weaknesses["overloaded"] >= 2:
+            risky_count += 1
+        if ply > LATE_GAME_PLY:
+            late_positions += 1
+            if weaknesses["hanging"] >= 1:
+                late_slips += 1
+
+    for dna_game in all_games:
+        if not dna_game.pgn.strip():
+            continue
+        player = None if dna_game.player_color is None else dna_game.player_color == "w"
+        sio = StringIO(dna_game.pgn)
+        while True:
             try:
-                sio = StringIO(pgn_text)
-                while True:
-                    game = chess.pgn.read_game(sio)
-                    if game is None:
-                        break
-                    games_count += 1
-                    board = game.board()
-                    for ply, move in enumerate(game.mainline_moves(), start=1):
-                        total_positions += 1
-                        weaknesses = _detect_position_weaknesses(board, ply)
-                        # Count tactical blunder moments where pieces are hanging or severely overworked
-                        if (
-                            weaknesses["hanging"] >= 1
-                            or weaknesses["overloaded"] >= 2
-                            or (weaknesses["pins"] >= 1 and weaknesses["hanging"] >= 1)
-                        ):
-                            blunders_count += 1
-                        for k, v in weaknesses.items():
-                            agg[k] += v
-                        board.push(move)
-            except Exception:
-                continue
+                game = chess.pgn.read_game(sio)
+            except ValueError as exc:
+                logger.warning("Skipping unreadable PGN in Blunder DNA: %s", exc)
+                break
+            if game is None:
+                break
+            games_count += 1
+            board = game.board()
+            for ply, move in enumerate(game.mainline_moves(), start=1):
+                if player is None or board.turn == player:
+                    record(board, ply)
+                board.push(move)
 
-    if fens:
-        for fen in fens:
-            try:
-                board = chess.Board(fen)
-                total_positions += 1
-                weaknesses = _detect_position_weaknesses(board, 20)
-                if weaknesses["hanging"] >= 1 or weaknesses["overloaded"] >= 2:
-                    blunders_count += 1
-                for k, v in weaknesses.items():
-                    agg[k] += v
-            except Exception:
-                continue
+    for fen in fens or []:
+        try:
+            board = chess.Board(fen)
+        except ValueError as exc:
+            logger.warning("Skipping invalid FEN in Blunder DNA: %s", exc)
+            continue
+        # A bare FEN's move counter is often unreliable; treat it as a middlegame position
+        record(board, 20)
 
-    if total_positions == 0:
-        # Default baseline benchmark profile
+    if positions == 0:
+        # Fixed example so the page has something to show before any games exist
         dims = BlunderDnaDimensions(
             pins=42,
             hanging_pieces=58,
@@ -315,29 +342,22 @@ def compute_blunder_dna(
                 "Ensure your king has an escape square before committing heavy pieces to the attack.",
                 "Double check for enemy alignment rays against your Queen.",
             ],
+            positions_analyzed=0,
+            is_sample=True,
         )
 
-    # Normalize counts to a 0-100 severity index
-    factor = 100.0 / max(1, total_positions)
-    pins_idx = min(95, max(10, int(agg["pins"] * factor * 2.0)))
-    hanging_idx = min(95, max(10, int(agg["hanging"] * factor * 1.8)))
-    overloaded_idx = min(95, max(10, int(agg["overloaded"] * factor * 2.0)))
-    back_rank_idx = min(95, max(10, int(agg["back_rank"] * factor * 2.5)))
-    time_scramble_idx = min(95, max(10, int(agg["time_scramble"] * factor * 1.5)))
-    pawn_struct_idx = min(95, max(10, int(agg["pawn_structure"] * factor * 1.2)))
-
     dims = BlunderDnaDimensions(
-        pins=pins_idx,
-        hanging_pieces=hanging_idx,
-        overloaded_defenders=overloaded_idx,
-        back_rank=back_rank_idx,
-        time_scramble=time_scramble_idx,
-        pawn_structure=pawn_struct_idx,
+        pins=_rate(present["pins"], positions),
+        hanging_pieces=_rate(present["hanging"], positions),
+        overloaded_defenders=_rate(present["overloaded"], positions),
+        back_rank=_rate(present["back_rank"], positions),
+        time_scramble=_rate(late_slips, late_positions),
+        pawn_structure=_rate(present["pawn_structure"], positions),
     )
 
     archetype = classify_archetype(dims)
-    avg_flaw = (pins_idx + hanging_idx + overloaded_idx + back_rank_idx + time_scramble_idx + pawn_struct_idx) / 6.0
-    resilience = max(15, min(98, int(100 - (avg_flaw * 0.75))))
+    values = [dims.pins, dims.hanging_pieces, dims.overloaded_defenders, dims.back_rank, dims.time_scramble, dims.pawn_structure]
+    resilience = round(100 - sum(values) / len(values))
 
     advice: list[str] = []
     if dims.hanging_pieces >= 50:
@@ -355,7 +375,8 @@ def compute_blunder_dna(
         dimensions=dims,
         archetype=archetype,
         resilience_score=resilience,
-        games_analyzed=max(1, games_count) if games_count > 0 else (len(fens) if fens else 1),
-        blunders_detected=blunders_count,
+        games_analyzed=games_count if games_count else len(fens or []),
+        blunders_detected=risky_count,
         critical_advice=advice,
+        positions_analyzed=positions,
     )

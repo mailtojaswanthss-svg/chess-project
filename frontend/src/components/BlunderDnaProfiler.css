@@ -115,7 +115,7 @@
 
 .dna-kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(120px, auto));
+  grid-template-columns: repeat(4, minmax(110px, auto));
   gap: 8px;
 }
 
@@ -429,7 +429,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .dna-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .dna-kpis dd {
     white-space: normal;
@@ -459,4 +459,16 @@
     grid-column: 1 / -1;
     grid-row: 2;
   }
+}
+
+.dna-ring__label,
+.dna-kpis dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dna-ring__label .metric-info {
+  width: 16px;
+  height: 16px;
 }

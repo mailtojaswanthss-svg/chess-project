@@ -1,0 +1,104 @@
+.metric-info {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  border-radius: 50%;
+  color: var(--text-3);
+  vertical-align: middle;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.metric-info:hover,
+.metric-info.is-open {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.metric-info:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 1px;
+}
+
+.metric-pop {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-solid);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lift);
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  line-height: var(--leading-body);
+  text-align: left;
+  white-space: normal;
+  animation: metric-pop-in var(--dur-fast) var(--ease-out) backwards;
+}
+
+.metric-pop.is-above {
+  animation-name: metric-pop-in-above;
+}
+
+.metric-pop__title {
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.metric-pop p {
+  margin: 0;
+}
+
+.metric-pop__what {
+  color: var(--text-1);
+}
+
+.metric-pop__label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: var(--text-label);
+  font-weight: 650;
+  color: var(--text-3);
+}
+
+.metric-pop__note {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgb(var(--fg-rgb) / 0.05);
+  font-size: var(--text-label);
+}
+
+.metric-pop__note--warn {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-weight: 600;
+}
+
+@keyframes metric-pop-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes metric-pop-in-above {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+.metric-unavailable {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+
+.metric-unavailable .num {
+  font-size: var(--text-small);
+  color: var(--text-2);
+}

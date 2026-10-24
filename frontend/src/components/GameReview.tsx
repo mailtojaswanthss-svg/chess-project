@@ -23,6 +23,7 @@ import {
   estimatePerformanceRating,
 } from "../utils/chessUtils";
 import { playSound } from "../utils/audio";
+import { MetricInfo } from "./MetricInfo";
 
 interface GameReviewProps {
   gameReport: GameReport | null;
@@ -133,7 +134,7 @@ export const GameReview: React.FC<GameReviewProps> = ({
       <div className="review-upload-bar">
         <label className="upload-pgn-btn">
           <Upload size={15} />
-          <span>{isUploading ? "Analyzing Game PGN..." : "Upload PGN Game for CAPS Review"}</span>
+          <span>{isUploading ? "Analyzing Game PGN..." : "Upload a PGN to review"}</span>
           <input type="file" accept=".pgn,.txt" onChange={onUploadPgn} disabled={isUploading} />
         </label>
         {gameReport && (
@@ -153,7 +154,7 @@ export const GameReview: React.FC<GameReviewProps> = ({
           <h3>No Game Analysis Loaded</h3>
           <p>
             Upload any standard chess PGN file above, or finish a game in <strong>Play & Train</strong> mode to
-            inspect calibrated blunder risks, CAPS 2.0 accuracy dials, and iconic move badges move by move.
+            inspect calibrated blunder risks, accuracy dials, and iconic move badges move by move.
           </p>
         </div>
       ) : (
@@ -175,14 +176,17 @@ export const GameReview: React.FC<GameReviewProps> = ({
                 </svg>
                 <div className="caps-dial-center">
                   <span className="caps-pct">{caps.white}%</span>
-                  <span className="caps-sub">CAPS</span>
+                  <span className="caps-sub">
+                    Accuracy <MetricInfo metric="accuracy" />
+                  </span>
                 </div>
               </div>
               <div className="caps-info">
                 <div className="player-badge-pill">♔ White</div>
                 <div className="caps-elo">
                   <Award size={14} className="text-cyan" />
-                  <span>Est. ELO: <strong>{whiteElo}</strong></span>
+                  <span>Est. performance: <strong>{whiteElo}</strong></span>
+                  <MetricInfo metric="performance" />
                 </div>
                 <span className="caps-summary-text">{whiteMoves.length} moves · {whiteAvgLoss} cp avg loss</span>
               </div>
@@ -207,14 +211,17 @@ export const GameReview: React.FC<GameReviewProps> = ({
                 </svg>
                 <div className="caps-dial-center">
                   <span className="caps-pct">{caps.black}%</span>
-                  <span className="caps-sub">CAPS</span>
+                  <span className="caps-sub">
+                    Accuracy <MetricInfo metric="accuracy" />
+                  </span>
                 </div>
               </div>
               <div className="caps-info">
                 <div className="player-badge-pill black">♚ Black</div>
                 <div className="caps-elo">
                   <Award size={14} className="text-cyan" />
-                  <span>Est. ELO: <strong>{blackElo}</strong></span>
+                  <span>Est. performance: <strong>{blackElo}</strong></span>
+                  <MetricInfo metric="performance" />
                 </div>
                 <span className="caps-summary-text">{blackMoves.length} moves · {blackAvgLoss} cp avg loss</span>
               </div>
@@ -384,7 +391,9 @@ export const GameReview: React.FC<GameReviewProps> = ({
                   </strong>
                 </div>
                 <div className="stat-pill">
-                  <span className="stat-sub">Blunder Probability</span>
+                  <span className="stat-sub">
+                    Risk on this move <MetricInfo metric="moveRisk" />
+                  </span>
                   <strong className={selectedMove.probability >= 0.5 ? "text-danger" : ""}>
                     {Math.round(selectedMove.probability * 100)}%
                   </strong>

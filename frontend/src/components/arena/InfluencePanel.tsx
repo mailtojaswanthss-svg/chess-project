@@ -1,6 +1,7 @@
 import "./Arena.css";
 import React from "react";
 import type { TerritoryControl } from "../../types/chess";
+import { MetricInfo } from "../MetricInfo";
 
 interface InfluencePanelProps {
   territory: TerritoryControl;
@@ -14,7 +15,10 @@ export const InfluencePanel: React.FC<InfluencePanelProps> = ({ territory }) => 
         <span className="influence-side">
           ♔ <span className="num">{center.white_percent}%</span>
         </span>
-        <span className="influence-title">Centre control (d4 · e4 · d5 · e5)</span>
+        <span className="influence-title">
+          Centre control (d4 · e4 · d5 · e5)
+          <MetricInfo metric="centreControl" />
+        </span>
         <span className="influence-side">
           <span className="num">{center.black_percent}%</span> ♚
         </span>

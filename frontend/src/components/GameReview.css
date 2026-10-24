@@ -463,3 +463,21 @@
   }
 
 }
+
+.caps-sub,
+.stat-pill .stat-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.caps-sub {
+  font-size: 10px;
+  letter-spacing: 0;
+  pointer-events: auto;
+}
+
+.caps-sub .metric-info {
+  width: 16px;
+  height: 16px;
+}

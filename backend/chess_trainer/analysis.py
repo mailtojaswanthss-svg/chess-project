@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from io import StringIO
 
+import chess
 import chess.pgn
 
 from .engine import StockfishEvaluator, move_loss_centipawns
@@ -22,6 +24,8 @@ class MoveAnalysis:
     risk_band: str
     evaluation_loss_centipawns: int
     is_blunder: bool
+    classification: str = "good"
+    badge_symbol: str = "○"
 
 
 @dataclass
@@ -37,6 +41,55 @@ class GameAnalysis:
     def high_risk_count(self) -> int:
         return sum(move.risk_band == "high" for move in self.moves)
 
+    @property
+    def caps_accuracy(self) -> dict[str, float]:
+        white_moves = [m for m in self.moves if m.player == "White"]
+        black_moves = [m for m in self.moves if m.player == "Black"]
+
+        def calc_caps(ms: list[MoveAnalysis]) -> float:
+            if not ms:
+                return 100.0
+            accs = [100.0 * math.exp(-0.0035 * max(0, m.evaluation_loss_centipawns)) for m in ms]
+            return round(sum(accs) / len(accs), 1)
+
+        return {
+            "white": calc_caps(white_moves),
+            "black": calc_caps(black_moves),
+        }
+
+    @property
+    def performance_rating(self) -> dict[str, int]:
+        caps = self.caps_accuracy
+        white_moves = [m for m in self.moves if m.player == "White"]
+        black_moves = [m for m in self.moves if m.player == "Black"]
+
+        def calc_perf(cap_val: float, ms: list[MoveAnalysis]) -> int:
+            if not ms:
+                return 1500
+            avg_loss = sum(m.evaluation_loss_centipawns for m in ms) / len(ms)
+            raw = 600 + (cap_val * 22) - (avg_loss * 2)
+            return max(400, min(3100, int(round(raw))))
+
+        return {
+            "white": calc_perf(caps["white"], white_moves),
+            "black": calc_perf(caps["black"], black_moves),
+        }
+
+    @property
+    def badge_counts(self) -> dict[str, dict[str, int]]:
+        counts: dict[str, dict[str, int]] = {
+            "white": {"brilliant": 0, "great": 0, "best": 0, "good": 0, "book": 0, "inaccuracy": 0, "mistake": 0, "blunder": 0},
+            "black": {"brilliant": 0, "great": 0, "best": 0, "good": 0, "book": 0, "inaccuracy": 0, "mistake": 0, "blunder": 0},
+        }
+        for m in self.moves:
+            color = "white" if m.player == "White" else "black"
+            cls = m.classification
+            if cls in counts[color]:
+                counts[color][cls] += 1
+            else:
+                counts[color]["good"] += 1
+        return counts
+
 
 def risk_band(probability: float) -> str:
     if probability >= 0.65:
@@ -44,6 +97,52 @@ def risk_band(probability: float) -> str:
     if probability >= 0.35:
         return "medium"
     return "low"
+
+
+def _classify_move(
+    board: chess.Board,
+    move: chess.Move,
+    loss: int,
+    ply: int,
+    danger_prob: float,
+) -> tuple[str, str]:
+    """Return (classification, badge_symbol)."""
+    # Book move in opening
+    if ply <= 6 and loss <= 25:
+        return "book", "📖"
+
+    if loss <= 15:
+        # Check for brilliant sacrifice: moved piece into an attacked square where material is genuinely sacrificed
+        moving_piece = board.piece_at(move.from_square)
+        if moving_piece and moving_piece.piece_type in (chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT):
+            enemy_attackers = list(board.attackers(not board.turn, move.to_square))
+            friendly_defenders = list(board.attackers(board.turn, move.to_square))
+            is_sac = False
+            if enemy_attackers:
+                if not friendly_defenders:
+                    is_sac = True
+                else:
+                    enemy_pieces = [board.piece_at(sq) for sq in enemy_attackers]
+                    attacker_types = [p.piece_type for p in enemy_pieces if p]
+                    if chess.PAWN in attacker_types and moving_piece.piece_type != chess.PAWN:
+                        is_sac = True
+                    elif moving_piece.piece_type == chess.QUEEN and any(pt in (chess.KNIGHT, chess.BISHOP, chess.ROOK) for pt in attacker_types):
+                        is_sac = True
+                    elif moving_piece.piece_type == chess.ROOK and any(pt in (chess.KNIGHT, chess.BISHOP) for pt in attacker_types):
+                        is_sac = True
+            if is_sac:
+                return "brilliant", "!!"
+        if danger_prob >= 0.55 and loss == 0:
+            return "great", "!"
+        return "best", "★"
+
+    if loss <= 40:
+        return "good", "○"
+    if loss <= 90:
+        return "inaccuracy", "?!"
+    if loss <= 200:
+        return "mistake", "?"
+    return "blunder", "??"
 
 
 def analyze_pgn(
@@ -63,6 +162,7 @@ def analyze_pgn(
         san = board.san(move)
         probability = model.predict_probability(extract_features(board, rating))
         loss = move_loss_centipawns(board, move, evaluator)
+        classification, badge = _classify_move(board, move, loss, ply, probability)
         moves.append(
             MoveAnalysis(
                 ply=ply,
@@ -75,6 +175,8 @@ def analyze_pgn(
                 risk_band=risk_band(probability),
                 evaluation_loss_centipawns=loss,
                 is_blunder=loss >= blunder_loss_centipawns,
+                classification=classification,
+                badge_symbol=badge,
             )
         )
         board.push(move)

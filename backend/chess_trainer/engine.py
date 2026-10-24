@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import atexit
 import logging
 import threading
 from dataclasses import dataclass, field
@@ -19,9 +18,12 @@ class EngineConfigurationError(RuntimeError):
     """Raised when Stockfish cannot be started or used."""
 
 
-# One Stockfish process per executable path, shared by every request.
-# SimpleEngine cancels a running search when a new command arrives, so each
-# search holds the engine's lock until it finishes.
+# For the API: one Stockfish process per executable path, shared by every
+# request (StockfishEvaluator(shared=True)). SimpleEngine cancels a running
+# search when a new command arrives, so each search holds the engine's lock
+# until it finishes. The API closes these in its lifespan shutdown; there is
+# no atexit hook because Python joins SimpleEngine's background thread before
+# running atexit handlers, so a hook there would never run and exit would hang.
 _engines: dict[Path, chess.engine.SimpleEngine] = {}
 _engine_locks: dict[Path, threading.Lock] = {}
 _registry_lock = threading.Lock()
@@ -62,7 +64,7 @@ def _discard_engine(path: Path) -> None:
 
 
 def shutdown_engines() -> None:
-    """Quit every shared engine. Called on API shutdown and at exit."""
+    """Quit every shared engine. Called on API shutdown."""
     with _registry_lock:
         engines = list(_engines.values())
         _engines.clear()
@@ -73,34 +75,66 @@ def shutdown_engines() -> None:
             logger.warning("Stockfish did not quit cleanly: %s", exc)
 
 
-atexit.register(shutdown_engines)
-
 
 @dataclass
 class StockfishEvaluator:
+    """Stockfish searches inside a ``with`` block.
+
+    By default the evaluator starts its own engine and quits it on exit
+    (training, scripts). ``shared=True`` borrows the long-lived per-path
+    engine instead, which stays running for the next API request.
+    """
+
     path: Path
     depth: int = 12
+    shared: bool = False
     _lock: threading.Lock = field(init=False, repr=False)
+    _own: chess.engine.SimpleEngine | None = field(default=None, init=False, repr=False)
 
     def __enter__(self) -> "StockfishEvaluator":
         self.path = Path(self.path)
-        get_engine(self.path)
-        self._lock = _lock_for(self.path)
+        if self.shared:
+            get_engine(self.path)
+            self._lock = _lock_for(self.path)
+        else:
+            self._own = _start_engine(self.path)
+            self._lock = threading.Lock()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
-        # The engine is shared and stays running for the next request.
-        return None
+        if self._own is not None:
+            try:
+                self._own.quit()
+            except (chess.engine.EngineError, OSError) as exc:
+                logger.warning("Stockfish did not quit cleanly: %s", exc)
+            self._own = None
+
+    def _engine(self) -> chess.engine.SimpleEngine:
+        if self.shared:
+            return get_engine(self.path)
+        if self._own is None:
+            self._own = _start_engine(self.path)
+        return self._own
+
+    def _restart(self) -> None:
+        if self.shared:
+            _discard_engine(self.path)
+        elif self._own is not None:
+            try:
+                self._own.close()
+            except (chess.engine.EngineError, OSError) as exc:
+                logger.warning("Could not close dead Stockfish process: %s", exc)
+            self._own = None
 
     def _run(self, search: Callable[[chess.engine.SimpleEngine], T]) -> T:
-        """Run one search on the shared engine, restarting it once if it died."""
+        """Run one search, restarting the engine once if it died."""
         with self._lock:
             try:
-                return search(get_engine(self.path))
+                return search(self._engine())
             except chess.engine.EngineTerminatedError:
                 logger.warning("Stockfish process died; restarting it")
-                _discard_engine(self.path)
-                return search(get_engine(self.path))
+                self._restart()
+                return search(self._engine())
 
     def _limit(self) -> chess.engine.Limit:
         return chess.engine.Limit(depth=self.depth, time=0.35)

@@ -50,7 +50,7 @@ def fake_popen(monkeypatch, tmp_path):
 def test_engine_process_is_reused_across_requests(fake_popen):
     exe, started = fake_popen
     for _ in range(3):
-        with StockfishEvaluator(exe, depth=8) as evaluator:
+        with StockfishEvaluator(exe, depth=8, shared=True) as evaluator:
             assert evaluator.score(chess.Board()) == 25
     assert len(started) == 1
     assert started[0].calls == 3
@@ -59,7 +59,7 @@ def test_engine_process_is_reused_across_requests(fake_popen):
 
 def test_dead_engine_is_restarted_once(fake_popen):
     exe, started = fake_popen
-    with StockfishEvaluator(exe) as evaluator:
+    with StockfishEvaluator(exe, shared=True) as evaluator:
         evaluator.score(chess.Board())
         started[0].die_next = True
         move, score = evaluator.best_move(chess.Board())
@@ -69,10 +69,19 @@ def test_dead_engine_is_restarted_once(fake_popen):
 
 def test_shutdown_quits_shared_engine(fake_popen):
     exe, started = fake_popen
-    with StockfishEvaluator(exe) as evaluator:
+    with StockfishEvaluator(exe, shared=True) as evaluator:
         evaluator.candidate_moves(chess.Board(), count=3)
     engine_mod.shutdown_engines()
     assert started[0].quit_called
+
+
+def test_private_evaluator_quits_its_engine_on_exit(fake_popen):
+    exe, started = fake_popen
+    with StockfishEvaluator(exe) as evaluator:
+        evaluator.score(chess.Board())
+    assert len(started) == 1
+    assert started[0].quit_called
+    assert engine_mod._engines == {}
 
 
 def test_missing_executable_is_a_configuration_error(tmp_path):
@@ -81,3 +90,27 @@ def test_missing_executable_is_a_configuration_error(tmp_path):
             pass
     assert engine_ready(None) is False
     assert engine_ready(tmp_path / "nope") is False
+
+
+def test_script_using_evaluator_exits_promptly(tmp_path):
+    """A plain script (like chess-train) must not hang at interpreter exit."""
+    import shutil
+    import subprocess
+    import sys
+
+    stockfish = shutil.which("stockfish") or "/usr/games/stockfish"
+    if not Path(stockfish).exists():
+        pytest.skip("Stockfish not installed")
+    script = (
+        "import chess\n"
+        "from pathlib import Path\n"
+        "from chess_trainer.engine import StockfishEvaluator\n"
+        f"with StockfishEvaluator(Path({stockfish!r}), depth=4) as e:\n"
+        "    e.score(chess.Board())\n"
+    )
+    backend = Path(__file__).resolve().parents[1] / "backend"
+    result = subprocess.run(
+        [sys.executable, "-c", script], cwd=tmp_path, timeout=20,
+        env={"PYTHONPATH": str(backend), "PATH": "/usr/bin:/bin"},
+    )
+    assert result.returncode == 0

@@ -185,7 +185,7 @@ def move(request: MoveRequest) -> MoveResponse:
         raise HTTPException(status_code=503, detail="Stockfish path is not configured")
     depth = max(4, min(14, 4 + request.strength // 2))
     try:
-        with StockfishEvaluator(settings.stockfish_path, depth=depth) as evaluator:
+        with StockfishEvaluator(settings.stockfish_path, depth=depth, shared=True) as evaluator:
             selected_move, score = evaluator.best_move(board)
             san = board.san(selected_move)
     except (OSError, EngineConfigurationError) as exc:
@@ -214,7 +214,7 @@ def trap_move(request: TrapMoveRequest) -> TrapMoveResponse:
         raise HTTPException(status_code=503, detail=f"Model not found: {settings.model_path}")
     try:
         model = get_blunder_model()
-        with StockfishEvaluator(settings.stockfish_path, depth=8) as evaluator:
+        with StockfishEvaluator(settings.stockfish_path, depth=8, shared=True) as evaluator:
             candidates = evaluator.candidate_moves(board)
             if not candidates:
                 raise EngineConfigurationError("Stockfish returned no candidate moves")
@@ -286,7 +286,7 @@ def analyze_game(request: GameAnalysisRequest) -> GameAnalysisResponse:
         raise HTTPException(status_code=503, detail="Stockfish path is not configured")
     try:
         model = get_blunder_model()
-        with StockfishEvaluator(settings.stockfish_path, depth=8) as evaluator:
+        with StockfishEvaluator(settings.stockfish_path, depth=8, shared=True) as evaluator:
             result = analyze_pgn(
                 request.pgn_text,
                 model,
@@ -406,7 +406,7 @@ def _analyze_position(board: chess.Board, rating: int, candidate_count: int = 3)
     if settings.stockfish_path is None or not settings.stockfish_path.exists():
         return analysis
     try:
-        with StockfishEvaluator(settings.stockfish_path, depth=8) as evaluator:
+        with StockfishEvaluator(settings.stockfish_path, depth=8, shared=True) as evaluator:
             raw_candidates = evaluator.candidate_moves(board, count=candidate_count)
     except (OSError, EngineConfigurationError) as exc:
         logger.warning("Position analysis continuing without engine candidates: %s", exc)

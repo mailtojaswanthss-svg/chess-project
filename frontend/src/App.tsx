@@ -1036,7 +1036,7 @@ export default function App() {
       if (report.moves.length > 0) {
         selectReviewPly(report, report.moves[0].ply);
       }
-      showToast("Game review loaded with CAPS accuracy");
+      showToast("Game review ready");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error analyzing game.");
     } finally {

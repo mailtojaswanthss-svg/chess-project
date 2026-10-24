@@ -62,7 +62,7 @@ export const GameReview: React.FC<GameReviewProps> = ({
   const whiteMoves = moves.filter((m) => m.player === "White");
   const blackMoves = moves.filter((m) => m.player === "Black");
 
-  // CAPS Accuracy computation
+  // Accuracy (our own formula, see utils/metricCopy.ts)
   const caps = gameReport?.caps_accuracy ?? calculateCapsAccuracy(moves);
   const whiteAvgLoss = whiteMoves.length
     ? Math.round(whiteMoves.reduce((acc, m) => acc + m.evaluation_loss_centipawns, 0) / whiteMoves.length)
@@ -159,7 +159,7 @@ export const GameReview: React.FC<GameReviewProps> = ({
         </div>
       ) : (
         <div className="review-content">
-          {/* 2. Chess.com-Grade Dual CAPS Accuracy & Performance Dials */}
+          {/* 2. Accuracy and estimated performance dials */}
           <div className="caps-dials-container">
             <div className="caps-card white-caps">
               <div className="caps-dial-wrap">
@@ -176,13 +176,14 @@ export const GameReview: React.FC<GameReviewProps> = ({
                 </svg>
                 <div className="caps-dial-center">
                   <span className="caps-pct">{caps.white}%</span>
-                  <span className="caps-sub">
-                    Accuracy <MetricInfo metric="accuracy" />
-                  </span>
+                  <span className="caps-sub">Accuracy</span>
                 </div>
               </div>
               <div className="caps-info">
-                <div className="player-badge-pill">♔ White</div>
+                <div className="caps-player">
+                  <div className="player-badge-pill">♔ White</div>
+                  <MetricInfo metric="accuracy" />
+                </div>
                 <div className="caps-elo">
                   <Award size={14} className="text-cyan" />
                   <span>Est. performance: <strong>{whiteElo}</strong></span>
@@ -211,13 +212,14 @@ export const GameReview: React.FC<GameReviewProps> = ({
                 </svg>
                 <div className="caps-dial-center">
                   <span className="caps-pct">{caps.black}%</span>
-                  <span className="caps-sub">
-                    Accuracy <MetricInfo metric="accuracy" />
-                  </span>
+                  <span className="caps-sub">Accuracy</span>
                 </div>
               </div>
               <div className="caps-info">
-                <div className="player-badge-pill black">♚ Black</div>
+                <div className="caps-player">
+                  <div className="player-badge-pill black">♚ Black</div>
+                  <MetricInfo metric="accuracy" />
+                </div>
                 <div className="caps-elo">
                   <Award size={14} className="text-cyan" />
                   <span>Est. performance: <strong>{blackElo}</strong></span>

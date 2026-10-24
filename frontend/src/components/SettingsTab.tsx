@@ -383,7 +383,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                                   onReviewGame(game);
                                 }}
                                 aria-label={`Review ${game.result} game`}
-                                title="Review with CAPS accuracy"
+                                title="Review with accuracy and move badges"
                               >
                                 <Eye size={13} /> Review
                               </button>

@@ -20,7 +20,7 @@ class FakeClassifier:
 class FakeEvaluator:
     """Stands in for Stockfish: always prefers e4, then d4, then Nf3."""
 
-    def __init__(self, path, depth=12):
+    def __init__(self, path, depth=12, shared=False):
         pass
 
     def __enter__(self):

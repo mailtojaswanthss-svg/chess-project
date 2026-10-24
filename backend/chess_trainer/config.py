@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     stockfish_path: Path | None = None
     model_path: Path = _get_default_model_path()
     blunder_loss_centipawns: int = 100
-    frontend_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # The live demo is listed so a player can point it at the engine on their own computer
+    frontend_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://chesswise-ai.vercel.app"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

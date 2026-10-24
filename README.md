@@ -19,7 +19,7 @@ ChessWise is a chess trainer that predicts **when you're likely to blunder**, ex
 
 ![ChessWise play screen in light mode](./docs/screenshots/play-light.png)
 
-<sub>The live link runs without the engine server, so analysis, the bots and the coach show as offline there. Run it locally with Stockfish for the full app.</sub>
+<sub>The live link has no engine server of its own, so analysis, the bots and the coach start offline there. To use your own: run `start-chesswise.bat` (or the backend with Stockfish), click **Engine offline** at the top of the live page and connect `http://localhost:8000`. Only your browser reaches your computer, so friends need their own engine.</sub>
 
 📑 Project report: [`docs/CHESSWISE_PROJECT_REPORT.docx`](./docs/CHESSWISE_PROJECT_REPORT.docx)
 

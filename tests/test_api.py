@@ -387,3 +387,27 @@ def test_blunder_dna_dimensions_are_plain_rates():
 def test_blunder_dna_rejects_too_many_fens():
     resp = TestClient(app).post("/blunder-dna", json={"fens": [chess.STARTING_FEN] * 201})
     assert resp.status_code == 422
+
+
+def test_public_site_can_reach_a_local_engine():
+    # The live demo calls the engine on the player's own computer: CORS has to allow its
+    # origin, and Chrome's private-network preflight has to get its opt-in header.
+    response = TestClient(app).options(
+        "/health",
+        headers={
+            "Origin": "https://chesswise-ai.vercel.app",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Private-Network": "true",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://chesswise-ai.vercel.app"
+    assert response.headers["access-control-allow-private-network"] == "true"
+
+
+def test_unknown_origin_is_still_refused():
+    response = TestClient(app).options(
+        "/health",
+        headers={"Origin": "https://example.com", "Access-Control-Request-Method": "GET"},
+    )
+    assert "access-control-allow-origin" not in response.headers

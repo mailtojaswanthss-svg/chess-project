@@ -157,13 +157,32 @@
   font-size: var(--text-label);
   font-weight: 600;
   color: var(--warn);
+  background: none;
+  font-family: inherit;
   white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.engine-status:hover {
+  border-color: var(--border-strong);
+  background: rgb(var(--fg-rgb) / 0.05);
+}
+
+.engine-status:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .engine-status.is-online {
   color: var(--good);
   background: var(--good-soft);
   border-color: transparent;
+}
+
+.engine-status.is-online:hover {
+  background: var(--good-soft);
+  border-color: color-mix(in srgb, var(--good) 35%, transparent);
 }
 
 .engine-status__text {

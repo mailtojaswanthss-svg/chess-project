@@ -46,6 +46,9 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
+    # A public page calling a server on the player's own machine sends Chrome's
+    # private-network preflight; without this opt-in the browser blocks the call.
+    allow_private_network=True,
 )
 
 

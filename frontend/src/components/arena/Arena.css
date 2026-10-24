@@ -38,7 +38,7 @@
   height: 6px;
   appearance: none;
   border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, var(--accent) var(--fill, 0%), rgba(148, 163, 184, 0.2) var(--fill, 0%));
+  background: linear-gradient(90deg, var(--accent) var(--fill, 0%), rgba(176, 184, 152, 0.2) var(--fill, 0%));
   cursor: pointer;
 }
 
@@ -49,7 +49,7 @@
   border-radius: 50%;
   background: var(--text-1);
   border: 3px solid var(--accent);
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 0 4px rgba(155, 196, 90, 0.2);
   transition: transform var(--dur-fast) var(--ease-spring);
 }
 
@@ -94,7 +94,7 @@
   height: 12px;
   margin-left: 2px;
   border-radius: var(--radius-pill);
-  background: rgba(148, 163, 184, 0.28);
+  background: rgba(176, 184, 152, 0.28);
   transition: background var(--dur-med) var(--ease-out);
 }
 
@@ -125,7 +125,7 @@
   border-radius: var(--radius-lg);
   background: var(--surface-1);
   border: 1px solid var(--border);
-  animation: slide-down var(--dur-med) var(--ease-out) both;
+  animation: slide-down var(--dur-med) var(--ease-out) backwards;
 }
 
 .influence-row {
@@ -151,13 +151,13 @@
   height: 8px;
   border-radius: var(--radius-pill);
   overflow: hidden;
-  background: rgba(239, 68, 68, 0.75);
+  background: rgb(196, 48, 72);
 }
 
 .influence-split__white {
   display: block;
   height: 100%;
-  background: rgba(6, 182, 212, 0.9);
+  background: rgb(255, 205, 86);
   transition: width var(--dur-slow) var(--ease-out);
 }
 
@@ -183,9 +183,9 @@
   vertical-align: -1px;
 }
 
-.swatch--white { background: rgba(6, 182, 212, 0.8); }
-.swatch--black { background: rgba(239, 68, 68, 0.8); }
-.swatch--contested { background: rgba(234, 179, 8, 0.8); }
+.swatch--white { background: rgb(255, 205, 86); }
+.swatch--black { background: rgb(196, 48, 72); }
+.swatch--contested { background: rgb(146, 110, 230); }
 
 /* ==========================================================================
    Player strips
@@ -194,8 +194,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 52px;
-  padding: 8px 12px;
+  min-height: 46px;
+  padding: 6px 12px;
   border-radius: var(--radius-lg);
   background: var(--surface-1);
   border: 1px solid var(--border);
@@ -204,33 +204,33 @@
 
 .player-strip.is-turn {
   border-color: var(--accent-ring);
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.09), var(--surface-1) 60%);
+  background: linear-gradient(90deg, rgba(155, 196, 90, 0.09), var(--surface-1) 60%);
 }
 
 .player-avatar {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-  border-radius: 10px;
-  font-size: 20px;
+  border-radius: 9px;
+  font-size: 18px;
   line-height: 1;
   background: var(--surface-2);
   transition: box-shadow var(--dur-med) var(--ease-out);
 }
 
 .player-avatar--w {
-  background: rgba(241, 245, 249, 0.14);
+  background: rgba(244, 243, 230, 0.14);
 }
 
 .player-avatar--b {
-  background: rgba(2, 6, 23, 0.7);
+  background: rgba(8, 12, 8, 0.7);
   box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .player-strip.is-turn .player-avatar {
-  --pulse-color: rgba(56, 189, 248, 0.5);
+  --pulse-color: rgba(155, 196, 90, 0.5);
   animation: pulse-ring 2s ease-out infinite;
 }
 
@@ -275,7 +275,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  min-height: 18px;
+  min-height: 0;
   font-size: 15px;
   line-height: 1;
   color: var(--text-2);
@@ -283,7 +283,7 @@
 
 .captured-piece {
   margin-right: -2px;
-  animation: pop-in var(--dur-med) var(--ease-out) both;
+  animation: pop-in var(--dur-med) var(--ease-out) backwards;
 }
 
 .material-lead {
@@ -318,7 +318,7 @@
   min-width: 0;
   border-radius: 12px;
   padding: 3px;
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(16, 24, 17, 0.9);
   box-shadow: 0 0 0 1px var(--border), 0 24px 48px -24px rgba(0, 0, 0, 0.9);
   transition: box-shadow var(--dur-med) var(--ease-out);
 }

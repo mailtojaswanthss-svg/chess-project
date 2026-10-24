@@ -19,10 +19,10 @@ body {
   line-height: var(--leading-body);
   color: var(--text-1);
   background:
-    radial-gradient(ellipse 70% 45% at 50% -10%, rgba(56, 189, 248, 0.13), transparent 70%),
-    radial-gradient(ellipse 40% 35% at 100% 15%, rgba(16, 185, 129, 0.06), transparent 70%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px) 0 0 / 48px 48px,
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px) 0 0 / 48px 48px,
+    radial-gradient(ellipse 70% 45% at 50% -10%, rgba(155, 196, 90, 0.14), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 100% 20%, rgba(238, 238, 210, 0.05), transparent 70%),
+    /* faint checkerboard, a nod to the board itself */
+    repeating-conic-gradient(rgba(238, 238, 210, 0.022) 0 25%, transparent 0 50%) 0 0 / 64px 64px,
     var(--surface-0);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

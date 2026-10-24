@@ -172,12 +172,12 @@
 }
 
 .moment-pill.is-blunder {
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: rgba(229, 103, 90, 0.4);
   color: #fca5a5;
 }
 
 .moment-pill.is-high {
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: rgba(232, 180, 76, 0.4);
   color: #fde68a;
 }
 
@@ -241,12 +241,12 @@
 
 .caps-progress.white {
   stroke: var(--good);
-  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+  filter: drop-shadow(0 0 6px rgba(95, 208, 138, 0.6));
 }
 
 .caps-progress.black {
   stroke: var(--accent);
-  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6));
+  filter: drop-shadow(0 0 6px rgba(155, 196, 90, 0.6));
 }
 
 .caps-dial-center {
@@ -385,8 +385,8 @@
 }
 
 .chart-bar.brilliant-bar {
-  fill: #00e5ff;
-  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.8));
+  fill: #9bc45a;
+  filter: drop-shadow(0 0 6px rgba(155, 196, 90, 0.8));
 }
 
 .selected-move-card-modern {

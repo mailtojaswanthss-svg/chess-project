@@ -36,18 +36,18 @@ const OVERLAYS: { key: keyof OverlayState; label: string; tip: string; icon: typ
 
 export const OverlayControls: React.FC<OverlayControlsProps> = ({ overlays, onToggle }) => (
   <div className="overlay-controls" role="group" aria-label="Board overlays">
-    <span className="overlay-controls__label">Overlays</span>
     <div className="segmented">
       {OVERLAYS.map(({ key, label, tip, icon: Icon }) => (
         <button
           key={key}
           className={`segmented__btn ${overlays[key] ? "is-active" : ""}`}
           aria-pressed={overlays[key]}
+          aria-label={label}
           data-tip={tip}
           onClick={() => onToggle(key)}
         >
           <Icon size={14} aria-hidden="true" />
-          {label}
+          <span className="overlay-label">{label}</span>
           <span className="overlay-switch" aria-hidden="true" />
         </button>
       ))}

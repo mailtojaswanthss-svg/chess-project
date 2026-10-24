@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { AppTab, ModelHealth } from "../types/chess";
 import { playSound } from "../utils/audio";
+import { Logo } from "./Logo";
 
 interface HeaderProps {
   activeTab: AppTab;
@@ -27,11 +28,11 @@ interface HeaderProps {
 }
 
 const TABS: { id: AppTab; label: string; icon: LucideIcon }[] = [
-  { id: "arena", label: "Tactical Arena", icon: Swords },
-  { id: "trap_dojo", label: "Trap Dojo", icon: Target },
-  { id: "blunder_dna", label: "Tactical DNA", icon: Dna },
-  { id: "academy", label: "Chess Academy", icon: GraduationCap },
-  { id: "settings", label: "Settings & Archive", icon: Archive },
+  { id: "arena", label: "Play", icon: Swords },
+  { id: "trap_dojo", label: "Trap Spotter", icon: Target },
+  { id: "blunder_dna", label: "Player Profile", icon: Dna },
+  { id: "academy", label: "Lessons", icon: GraduationCap },
+  { id: "settings", label: "Games & Settings", icon: Archive },
 ];
 
 export const Header: React.FC<HeaderProps> = ({
@@ -75,10 +76,12 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="topbar">
       <button className="brand" onClick={() => handleTab("arena")} aria-label="ChessWise AI home">
-        <span className="brand-mark" aria-hidden="true">♞</span>
+        <Logo size={40} className="brand-mark" />
         <span className="brand-text">
-          <strong>ChessWise AI</strong>
-          <span className="brand-sub">Tactical lab &amp; blunder intelligence</span>
+          <strong>
+            ChessWise <span className="brand-ai">AI</span>
+          </strong>
+          <span className="brand-sub">Train smarter. Blunder less.</span>
         </span>
       </button>
 

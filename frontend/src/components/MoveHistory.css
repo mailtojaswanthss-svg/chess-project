@@ -39,8 +39,8 @@
 }
 
 .history-move.is-current {
-  color: #04131f;
+  color: #12200d;
   background: var(--accent);
   font-weight: 500;
-  animation: pop-in var(--dur-med) var(--ease-out) both;
+  animation: pop-in var(--dur-med) var(--ease-out) backwards;
 }

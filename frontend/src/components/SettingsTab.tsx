@@ -32,10 +32,11 @@ interface SettingsTabProps {
 }
 
 const MODE_LABEL: Record<string, string> = {
-  free_lab: "Free Lab",
+  free_lab: "Analysis",
   max_engine: "Stockfish",
   human_sparring: "Maia",
-  tricky_bot: "Tricky Bot",
+  tricky_bot: "Trapper",
+  trap_puzzle: "Trap puzzle",
 };
 
 const STACK = [
@@ -88,7 +89,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     <div className="view settings">
       <div className="page-head">
         <div>
-          <h1 className="page-title">Settings &amp; Archive</h1>
+          <h1 className="page-title">Games &amp; Settings</h1>
           <p className="page-sub">Preferences, your saved matches, and how the engine works.</p>
         </div>
       </div>
@@ -208,7 +209,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <div className="card__empty archive-empty">
               <Inbox size={40} aria-hidden="true" />
               <strong>No matches yet</strong>
-              <span>Finished games against Stockfish, Maia or the Tricky Bot are saved here automatically.</span>
+              <span>Finished games against Stockfish, Maia or the Trapper are saved here automatically.</span>
             </div>
           ) : (
             <div className="archive-scroll">

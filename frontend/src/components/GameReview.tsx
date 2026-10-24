@@ -297,10 +297,10 @@ export const GameReview: React.FC<GameReviewProps> = ({
                         } ${isSelected ? "selected-bar" : ""}`}
                       />
                       {isBlunder && (
-                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3" fill="#ef4444" />
+                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3" fill="#e5675a" />
                       )}
                       {isBrilliant && (
-                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3.5" fill="#00e5ff" />
+                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3.5" fill="#9bc45a" />
                       )}
                     </g>
                   );

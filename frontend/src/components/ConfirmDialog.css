@@ -10,11 +10,11 @@
 }
 
 .confirm-dialog[open] {
-  animation: pop-in var(--dur-med) var(--ease-out) both;
+  animation: pop-in var(--dur-med) var(--ease-out) backwards;
 }
 
 .confirm-dialog::backdrop {
-  background: rgba(2, 6, 23, 0.7);
+  background: rgba(8, 12, 8, 0.7);
   backdrop-filter: blur(4px);
   animation: fade-in var(--dur-med) var(--ease-out);
 }

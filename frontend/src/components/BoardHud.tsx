@@ -8,9 +8,12 @@ interface BoardHudProps {
   sideToMove: "w" | "b";
   fen: string;
   moveCount: number;
-  riskScore: number; // 0.0 to 1.0
+  /** 0.0 to 1.0; null hides the meter (e.g. in puzzles) */
+  riskScore: number | null;
   isCheck?: boolean;
   isAnalyzing?: boolean;
+  /** Extra controls shown at the end of the row (e.g. overlay toggles) */
+  children?: React.ReactNode;
 }
 
 function gamePhase(fen: string, moveCount: number): { label: string; hint: string } {
@@ -37,17 +40,21 @@ export const BoardHud: React.FC<BoardHudProps> = ({
   riskScore,
   isCheck = false,
   isAnalyzing = false,
+  children,
 }) => {
   const phase = useMemo(() => gamePhase(fen, moveCount), [fen, moveCount]);
-  const risk = riskFor(riskScore);
+  const risk = riskFor(riskScore ?? 0);
   const RiskIcon = RISK_ICON[risk.tone];
-  const shownPct = Math.round(useCountUp(riskScore * 100));
+  const shownPct = Math.round(useCountUp((riskScore ?? 0) * 100));
 
   return (
     <div className={`board-hud ${isCheck ? "is-check" : ""}`} role="status" aria-live="polite">
       <span className={`hud-chip hud-turn hud-turn--${sideToMove}`}>
         <span className="hud-turn__glyph" aria-hidden="true">{sideToMove === "w" ? "♔" : "♚"}</span>
-        <span key={sideToMove} className="hud-turn__text">{sideToMove === "w" ? "White" : "Black"} to move</span>
+        <span key={sideToMove} className="hud-turn__text">
+          {sideToMove === "w" ? "White" : "Black"}
+          <span className="hud-turn__suffix"> to move</span>
+        </span>
       </span>
 
       {isCheck && (
@@ -56,12 +63,12 @@ export const BoardHud: React.FC<BoardHudProps> = ({
         </span>
       )}
 
-      <span className="hud-chip" title={phase.hint}>
+      <span className="hud-chip hud-phase" title={phase.hint}>
         <Compass size={14} aria-hidden="true" />
         {phase.label}
       </span>
 
-      <div className={`hud-risk hud-risk--${risk.tone}`} title={`${risk.label}: ${risk.description}`}>
+      {riskScore !== null && <div className={`hud-risk hud-risk--${risk.tone}`} title={`${risk.label}: ${risk.description}`}>
         <RiskIcon size={14} aria-hidden="true" />
         <span className="hud-risk__label">Blunder risk</span>
         <div className="meter hud-risk__meter">
@@ -71,7 +78,8 @@ export const BoardHud: React.FC<BoardHudProps> = ({
           />
         </div>
         <span className="hud-risk__value num">{shownPct}%</span>
-      </div>
+      </div>}
+      {children && <div className="hud-extras">{children}</div>}
     </div>
   );
 };

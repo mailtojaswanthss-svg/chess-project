@@ -43,7 +43,7 @@ export const OutlookCard: React.FC<OutlookCardProps> = ({
         <p className="card__body">{coachingTakeaway(outcome)}</p>
         <p className="outlook-foot">
           Decided by {outcome.reason.toLowerCase()} after <span className="num">{outcome.moves.length}</span> plies.
-          Undo to take it back, or review it from Settings &amp; Archive.
+          Undo to take it back, or review it from Games &amp; Settings.
         </p>
       </section>
     );

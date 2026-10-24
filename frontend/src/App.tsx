@@ -38,6 +38,8 @@ import { OutlookCard } from "./components/arena/OutlookCard";
 import { CoachCard } from "./components/arena/CoachCard";
 import { ThreatRadarCard } from "./components/arena/ThreatRadarCard";
 import { ReviewWorkspace } from "./components/review/ReviewWorkspace";
+import { PuzzleCard, type PuzzleStatus } from "./components/arena/PuzzleCard";
+import { useTrapPuzzles, puzzleStartPosition, puzzleSolveLength, puzzleSolverColor } from "./utils/useTrapPuzzles";
 import {
   gameOutcome,
   getKingSquare,
@@ -60,6 +62,8 @@ export default function App() {
   const [fenHistory, setFenHistory] = useState<string[]>([STARTING_FEN]);
   const [rating, setRating] = useState<number>(1200);
   const [playMode, setPlayMode] = useState<PlayMode>("free_lab");
+  const playModeRef = useRef<PlayMode>("free_lab");
+  playModeRef.current = playMode;
   const [activeTab, setActiveTab] = useState<AppTab>("arena");
   const [isReviewingGame, setIsReviewingGame] = useState<boolean>(false);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
@@ -116,6 +120,27 @@ export default function App() {
       return [];
     }
   });
+
+  // Each mode keeps its own game; switching modes parks the current one here
+  type ModeSession = {
+    game: Chess;
+    fenHistory: string[];
+    completed: SavedGame | null;
+    isFlipped: boolean;
+    rating: number;
+    evaluation: number | null;
+  };
+  const sessionsRef = useRef<Partial<Record<PlayMode, ModeSession>>>({});
+  const resumeBotRef = useRef<boolean>(false);
+
+  // Trap puzzles (arena mode)
+  const puzzles = useTrapPuzzles(API_URL);
+  const [puzzleIndex, setPuzzleIndex] = useState<number>(0);
+  const [puzzleStep, setPuzzleStep] = useState<number>(0);
+  const [puzzleStatus, setPuzzleStatus] = useState<PuzzleStatus>("solving");
+  const [puzzleSolved, setPuzzleSolved] = useState<Set<string>>(() => new Set());
+  const puzzleTimerRef = useRef<number[]>([]);
+  const activePuzzle = puzzles.length ? puzzles[puzzleIndex % puzzles.length] : undefined;
 
   // Review & Model Health
   const [gameReport, setGameReport] = useState<GameReport | null>(null);
@@ -191,10 +216,12 @@ export default function App() {
     playMode === "max_engine"
       ? `Stockfish 16 (${rating} Elo)`
       : playMode === "tricky_bot"
-      ? `Tricky Bot`
+      ? `The Trapper (${rating})`
       : playMode === "human_sparring"
       ? `Maia-2 (${rating} Elo)`
-      : "Free Lab (Sandbox)";
+      : playMode === "trap_puzzle"
+      ? "Trap puzzle opponent"
+      : "Free play";
 
   // Synchronize saved games with localStorage
   useEffect(() => {
@@ -297,15 +324,106 @@ export default function App() {
 
   // Analyse on mount and again whenever the rating changes, so requests never carry a stale rating
   useEffect(() => {
+    if (playModeRef.current === "trap_puzzle") return;
     const timer = window.setTimeout(() => void analyzePosition(game), 200);
     return () => window.clearTimeout(timer);
   }, [analyzePosition]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelectMode = (mode: PlayMode) => {
-    setPlayMode(mode);
-    if (mode === "human_sparring" && !MAIA_RATINGS.includes(rating)) setRating(1500);
+  const clearPuzzleTimers = () => {
+    puzzleTimerRef.current.forEach((t) => window.clearTimeout(t));
+    puzzleTimerRef.current = [];
+  };
+
+  // Put a puzzle on the board: the opponent's tempting move is already played
+  const loadPuzzle = (index: number) => {
+    if (!puzzles.length) return;
+    clearPuzzleTimers();
+    const puzzle = puzzles[((index % puzzles.length) + puzzles.length) % puzzles.length];
+    const start = puzzleStartPosition(puzzle);
+    moveRequestIdRef.current++;
+    analysisRequestIdRef.current++;
+    setPuzzleIndex(puzzles.indexOf(puzzle));
+    setPuzzleStep(0);
+    setPuzzleStatus("solving");
+    setGame(start);
+    setFenHistory([puzzle.fen, start.fen()]);
+    setIsFlipped(puzzleSolverColor(puzzle) === "b");
+    setCompletedGameSummary(null);
     setSelectedSquare(null);
     setOptionSquares({});
+    setHintArrow([]);
+    setTacticalAnalysis(null);
+    setAnalysis(null);
+    setEngineEvaluation(null);
+    setError(null);
+  };
+
+  const handleSelectMode = (mode: PlayMode) => {
+    if (mode === playMode) return;
+    playSound("click");
+    clearPuzzleTimers();
+    moveRequestIdRef.current++;
+    analysisRequestIdRef.current++;
+    setIsBotThinking(false);
+    setIsAnalyzing(false);
+
+    // Park the current game, then bring back the target mode's game (or start one)
+    sessionsRef.current[playMode] = {
+      game,
+      fenHistory,
+      completed: completedGameSummary,
+      isFlipped,
+      rating,
+      evaluation: engineEvaluation,
+    };
+    setPlayMode(mode);
+    setSelectedSquare(null);
+    setOptionSquares({});
+    setHintArrow([]);
+    setHoveredCandidateMove(null);
+    setHoveredThreatSquare(null);
+    setCoachAdvice(null);
+    setTacticalAnalysis(null);
+    setAnalysis(null);
+    setError(null);
+
+    if (mode === "trap_puzzle") {
+      const saved = sessionsRef.current.trap_puzzle;
+      if (saved) {
+        setGame(saved.game);
+        setFenHistory(saved.fenHistory);
+        setIsFlipped(saved.isFlipped);
+        setEngineEvaluation(null);
+        setCompletedGameSummary(null);
+      } else {
+        loadPuzzle(puzzleIndex);
+      }
+      return;
+    }
+
+    const saved = sessionsRef.current[mode];
+    const nextRating = saved?.rating ?? (mode === "human_sparring" && !MAIA_RATINGS.includes(rating) ? 1500 : rating);
+    const nextGame = saved?.game ?? new Chess();
+    setGame(nextGame);
+    setFenHistory(saved?.fenHistory ?? [STARTING_FEN]);
+    setCompletedGameSummary(saved?.completed ?? null);
+    setIsFlipped(saved?.isFlipped ?? false);
+    setEngineEvaluation(saved?.evaluation ?? null);
+    setRating(nextRating);
+    // If the bot was to move when this game was parked, let it move once the mode is active
+    resumeBotRef.current = Boolean(saved) && !saved?.completed;
+    if (nextRating === rating) void analyzePosition(nextGame);
+  };
+
+  // A rated game locks its rating until it ends or a new game starts
+  const ratedModes: PlayMode[] = ["max_engine", "human_sparring", "tricky_bot"];
+  const ratingLocked = ratedModes.includes(playMode) && game.history().length > 0 && !completedGameSummary;
+  const handleSetRating = (r: number) => {
+    if (ratingLocked) {
+      showToast("Rating is locked for this game. Start a new game to change it.");
+      return;
+    }
+    setRating(r);
     playSound("click");
   };
 
@@ -317,7 +435,7 @@ export default function App() {
   // Request Engine Opponent Move (Stockfish / Trap / Maia)
   const requestBotMove = useCallback(
     async (position: Chess) => {
-      if (playMode === "free_lab") return;
+      if (playMode === "free_lab" || playMode === "trap_puzzle") return;
       const reqId = ++moveRequestIdRef.current;
       setIsBotThinking(true);
       setError(null);
@@ -421,7 +539,7 @@ export default function App() {
       const botMove = (await res.json()) as BotMove;
       const from = botMove.uci.slice(0, 2) as Square;
       const to = botMove.uci.slice(2, 4) as Square;
-      setHintArrow([[from, to, "rgba(74, 222, 128, 0.9)"]]);
+      setHintArrow([[from, to, "rgba(255, 205, 86, 0.95)"]]);
       showToast(`Coach Hint: ${botMove.san}`);
     } catch {
       showToast("Hint unavailable for this position");
@@ -482,6 +600,48 @@ export default function App() {
 
       if (!move) return false;
 
+      if (playMode === "trap_puzzle") {
+        if (!activePuzzle || puzzleStatus === "solved" || puzzleStatus === "revealed") return false;
+        const line = activePuzzle.punishment_line;
+        const expected = line[puzzleStep];
+        if (move.san !== expected && !next.isCheckmate()) {
+          setPuzzleStatus("wrong");
+          playSound("blunder");
+          setSelectedSquare(null);
+          setOptionSquares({});
+          return false;
+        }
+        setGame(next);
+        setFenHistory((prev) => [...prev, next.fen()]);
+        setSelectedSquare(null);
+        setOptionSquares({});
+        setHintArrow([]);
+        playSound(move.captured ? "capture" : next.isCheck() ? "check" : "move");
+        const done = puzzleStep + 1;
+        if (done >= puzzleSolveLength(activePuzzle) || next.isCheckmate()) {
+          setPuzzleStep(done);
+          setPuzzleStatus("solved");
+          setPuzzleSolved((prev) => new Set(prev).add(activePuzzle.id));
+          playSound("game_end");
+          return true;
+        }
+        // Correct: the opponent replies with the next move of the line
+        setPuzzleStep(done);
+        setPuzzleStatus("correct");
+        const timer = window.setTimeout(() => {
+          const replyBoard = new Chess();
+          replyBoard.loadPgn(next.pgn());
+          const reply = replyBoard.move(line[done]);
+          setGame(replyBoard);
+          setFenHistory((prev) => [...prev, replyBoard.fen()]);
+          setPuzzleStep(done + 1);
+          setPuzzleStatus("solving");
+          playSound(reply?.captured ? "capture" : replyBoard.isCheck() ? "check" : "move");
+        }, 550);
+        puzzleTimerRef.current.push(timer);
+        return true;
+      }
+
       setGame(next);
       setFenHistory((prev) => [...prev, next.fen()]);
       setSelectedSquare(null);
@@ -505,8 +665,53 @@ export default function App() {
 
       return true;
     },
-    [completedGameSummary, isBotThinking, game, playMode, requestBotMove, analyzePosition]
+    [completedGameSummary, isBotThinking, game, playMode, requestBotMove, analyzePosition, activePuzzle, puzzleStep, puzzleStatus]
   );
+
+  // Resume a parked bot game whose bot was to move
+  useEffect(() => {
+    if (!resumeBotRef.current) return;
+    resumeBotRef.current = false;
+    if (!ratedModes.includes(playMode) || completedGameSummary || gameOutcome(game)) return;
+    const userColor = isFlipped ? "b" : "w";
+    if (game.turn() !== userColor) void requestBotMove(game);
+  }, [playMode, game, requestBotMove]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePuzzleHint = () => {
+    if (!activePuzzle) return;
+    const expected = activePuzzle.punishment_line[puzzleStep];
+    const probe = new Chess(game.fen());
+    try {
+      const m = probe.move(expected);
+      setOptionSquares({ [m.from]: { boxShadow: "inset 0 0 0 4px rgba(238, 238, 210, 0.95)", background: "rgba(238, 238, 210, 0.35)" } });
+      showToast("Hint: move the highlighted piece");
+    } catch {
+      showToast("No hint for this position");
+    }
+  };
+
+  // Play the rest of the line on the board, one move at a time
+  const handlePuzzleReveal = () => {
+    if (!activePuzzle) return;
+    clearPuzzleTimers();
+    setPuzzleStatus("revealed");
+    const line = activePuzzle.punishment_line;
+    let board = new Chess();
+    board.loadPgn(game.pgn());
+    for (let i = puzzleStep; i < puzzleSolveLength(activePuzzle); i++) {
+      const timer = window.setTimeout(() => {
+        const nextBoard = new Chess();
+        nextBoard.loadPgn(board.pgn());
+        nextBoard.move(line[i]);
+        board = nextBoard;
+        setGame(nextBoard);
+        setFenHistory((prev) => [...prev, nextBoard.fen()]);
+        setPuzzleStep(i + 1);
+        playSound("move");
+      }, 650 * (i - puzzleStep + 1));
+      puzzleTimerRef.current.push(timer);
+    }
+  };
 
   // react-chessboard drag and drop drop handler
   const onPieceDrop = (sourceSquare: Square, targetSquare: Square): boolean => {
@@ -668,9 +873,20 @@ export default function App() {
     setCoachAdvice(null);
     setEngineEvaluation(null);
     setError(null);
+    setIsBotThinking(false);
     playSound("move");
-    showToast("New game initialized");
-    void analyzePosition(next);
+    if (playMode === "trap_puzzle") {
+      loadPuzzle(puzzleIndex);
+      showToast("Puzzle reset");
+      return;
+    }
+    showToast("New game");
+    // Playing Black against a bot: the bot opens
+    if (ratedModes.includes(playMode) && isFlipped) {
+      void requestBotMove(next);
+    } else {
+      void analyzePosition(next);
+    }
   };
 
   // Copy FEN
@@ -847,20 +1063,20 @@ export default function App() {
       Object.entries(territoryControl.squares).forEach(([sq, data]) => {
         if (data.dominant === "w") {
           styles[sq] = {
-            backgroundColor: `rgba(6, 182, 212, ${0.16 + data.intensity * 0.22})`,
-            boxShadow: "inset 0 0 0 1px rgba(6, 182, 212, 0.35)",
+            backgroundColor: `rgba(255, 205, 86, ${0.22 + data.intensity * 0.3})`,
+            boxShadow: "inset 0 0 0 2px rgba(255, 205, 86, 0.55)",
             transition: "background-color 0.2s ease",
           };
         } else if (data.dominant === "b") {
           styles[sq] = {
-            backgroundColor: `rgba(239, 68, 68, ${0.16 + data.intensity * 0.22})`,
-            boxShadow: "inset 0 0 0 1px rgba(239, 68, 68, 0.35)",
+            backgroundColor: `rgba(196, 48, 72, ${0.22 + data.intensity * 0.3})`,
+            boxShadow: "inset 0 0 0 2px rgba(196, 48, 72, 0.55)",
             transition: "background-color 0.2s ease",
           };
         } else if (data.dominant === "contested") {
           styles[sq] = {
-            backgroundColor: "rgba(234, 179, 8, 0.22)",
-            boxShadow: "inset 0 0 0 1px rgba(234, 179, 8, 0.35)",
+            backgroundColor: "rgba(146, 110, 230, 0.3)",
+            boxShadow: "inset 0 0 0 2px rgba(146, 110, 230, 0.55)",
             transition: "background-color 0.2s ease",
           };
         }
@@ -977,7 +1193,7 @@ export default function App() {
       showToast("Could not load academy position");
       return;
     }
-    loadIntoArena(loaded, `Loaded "${title}" in Free Lab`, { freeLab: true });
+    loadIntoArena(loaded, `Loaded "${title}" on the analysis board`, { freeLab: true });
   };
 
   const handleLoadSavedGame = (saved: SavedGame) => {
@@ -1064,11 +1280,9 @@ export default function App() {
               <PlayToolbar
                 playMode={playMode}
                 rating={rating}
+                ratingLocked={ratingLocked}
                 onSelectMode={handleSelectMode}
-                onSetRating={(r) => {
-                  setRating(r);
-                  playSound("click");
-                }}
+                onSetRating={handleSetRating}
               />
               <ArenaView
                 boardSize={boardSize}
@@ -1077,12 +1291,14 @@ export default function App() {
                     sideToMove={sideToMove}
                     fen={game.fen()}
                     moveCount={history.length}
-                    riskScore={riskScore}
+                    riskScore={playMode === "trap_puzzle" ? null : riskScore}
                     isCheck={isCheck}
                     isAnalyzing={isAnalyzing}
-                  />
+                  >
+                    <OverlayControls overlays={overlays} onToggle={handleToggleOverlay} />
+                  </BoardHud>
                 }
-                overlays={<OverlayControls overlays={overlays} onToggle={handleToggleOverlay} />}
+                overlays={null}
                 overlayDetail={
                   showTerritoryHeatmap && territoryControl ? <InfluencePanel territory={territoryControl} /> : null
                 }
@@ -1132,21 +1348,39 @@ export default function App() {
                 }
                 controls={
                   <BoardControls
-                    canUndo={!(history.length === 0 && fenHistory.length <= 1) && !isBotThinking}
+                    canUndo={playMode !== "trap_puzzle" && !(history.length === 0 && fenHistory.length <= 1) && !isBotThinking}
                     canHint={isLive && !isBotThinking && !isFetchingHint}
                     isFetchingHint={isFetchingHint}
                     hasMoves={history.length > 0}
                     boardSize={boardSize}
                     onUndo={handleUndo}
-                    onHint={handleRequestHint}
+                    onHint={playMode === "trap_puzzle" ? handlePuzzleHint : handleRequestHint}
                     onFlip={handleFlipBoard}
                     onCopyFen={handleCopyFen}
                     onDownloadPgn={() => handleDownloadPgn()}
                     onToggleBoardSize={handleToggleBoardSize}
                     onNewGame={handleNewGame}
+                    newGameLabel={playMode === "trap_puzzle" ? "Restart" : "New game"}
                   />
                 }
-                sidebar={[
+                sidebar={playMode === "trap_puzzle" ? [
+                  <PuzzleCard
+                    key="puzzle"
+                    puzzle={activePuzzle}
+                    index={puzzleIndex}
+                    total={puzzles.length}
+                    step={puzzleStep}
+                    solveLength={activePuzzle ? puzzleSolveLength(activePuzzle) : 0}
+                    status={puzzleStatus}
+                    solvedCount={puzzleSolved.size}
+                    onHint={handlePuzzleHint}
+                    onReveal={handlePuzzleReveal}
+                    onRetry={() => loadPuzzle(puzzleIndex)}
+                    onPrev={() => loadPuzzle(puzzleIndex - 1)}
+                    onNext={() => loadPuzzle(puzzleIndex + 1)}
+                  />,
+                  <MoveHistory key="history" movePairs={movePairs} />,
+                ] : [
                   <OutlookCard
                     key="outlook"
                     winChances={tacticalAnalysis?.win_chances}
@@ -1208,7 +1442,16 @@ export default function App() {
           {activeTab === "trap_dojo" && <TrapDrillMode apiUrl={API_URL} />}
 
           {activeTab === "blunder_dna" && (
-            <BlunderDnaProfiler savedGames={savedGames} apiUrl={API_URL} onNavigateAcademy={handleNavigateAcademy} />
+            <BlunderDnaProfiler
+              savedGames={savedGames}
+              apiUrl={API_URL}
+              onNavigateAcademy={handleNavigateAcademy}
+              onPracticePuzzles={() => {
+                setActiveTab("arena");
+                setIsReviewingGame(false);
+                handleSelectMode("trap_puzzle");
+              }}
+            />
           )}
 
           {activeTab === "academy" && (

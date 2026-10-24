@@ -15,6 +15,7 @@ interface BoardControlsProps {
   onDownloadPgn: () => void;
   onToggleBoardSize: () => void;
   onNewGame: () => void;
+  newGameLabel?: string;
 }
 
 export const BoardControls: React.FC<BoardControlsProps> = ({
@@ -30,6 +31,7 @@ export const BoardControls: React.FC<BoardControlsProps> = ({
   onDownloadPgn,
   onToggleBoardSize,
   onNewGame,
+  newGameLabel = "New game",
 }) => (
   <div className="board-controls" role="toolbar" aria-label="Board controls">
     <div className="board-controls__group">
@@ -66,7 +68,7 @@ export const BoardControls: React.FC<BoardControlsProps> = ({
         <Maximize2 size={15} />
       </button>
       <button className="btn btn--primary" onClick={onNewGame} title="Reset to the starting position">
-        <RotateCcw size={15} /> <span className="btn-label">New game</span>
+        <RotateCcw size={15} /> <span className="btn-label">{newGameLabel}</span>
       </button>
     </div>
   </div>

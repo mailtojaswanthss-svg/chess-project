@@ -15,7 +15,11 @@
 
 ChessWise is a chess trainer that predicts **when you're likely to blunder**, explains why, and drills you on the patterns that cost you games. It combines a calibrated machine-learning model, Stockfish, and a coach, and every number it shows comes with an explanation.
 
+**Try it live: [chesswise-ai.vercel.app](https://chesswise-ai.vercel.app)**
+
 ![ChessWise play screen in light mode](./docs/screenshots/play-light.png)
+
+<sub>The live link runs without the engine server, so analysis, the bots and the coach show as offline there. Run it locally with Stockfish for the full app.</sub>
 
 📑 Project report: [`docs/CHESSWISE_PROJECT_REPORT.docx`](./docs/CHESSWISE_PROJECT_REPORT.docx)
 

@@ -1,0 +1,54 @@
+/* App-level feedback: toast and error banner */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-solid);
+  border: 1px solid var(--accent-ring);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8), 0 0 24px -8px rgba(56, 189, 248, 0.6);
+  font-size: var(--text-small);
+  font-weight: 600;
+  transform: translateX(-50%);
+  animation: toast-in 2.5s var(--ease-out) both;
+}
+
+.toast svg {
+  color: var(--good);
+  flex-shrink: 0;
+}
+
+@keyframes toast-in {
+  0% { opacity: 0; transform: translate(-50%, 16px) scale(0.96); }
+  10%, 85% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--danger-soft);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
+  font-size: var(--text-small);
+  animation: slide-down var(--dur-med) var(--ease-out) both;
+}
+
+.error-banner > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-banner svg {
+  flex-shrink: 0;
+  color: var(--danger);
+}

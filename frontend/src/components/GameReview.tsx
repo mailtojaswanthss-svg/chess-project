@@ -1,3 +1,4 @@
+import "./GameReview.css";
 import React from "react";
 import {
   Upload,

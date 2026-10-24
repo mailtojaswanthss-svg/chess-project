@@ -1,0 +1,244 @@
+/* Outlook */
+.outlook-score {
+  font-size: 1.35rem;
+  color: var(--gold);
+}
+
+.outlook--final {
+  border-color: rgba(251, 191, 36, 0.35);
+  animation: pop-in 520ms var(--ease-out) both;
+}
+
+.outlook-foot {
+  font-size: var(--text-small);
+  color: var(--text-3);
+}
+
+.outlook-last {
+  color: var(--text-1);
+}
+
+.wdl {
+  display: grid;
+  gap: 8px;
+}
+
+.wdl__bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: #1e293b;
+}
+
+.wdl__seg {
+  flex-basis: 0;
+  min-width: 2px;
+  transition: flex-grow var(--dur-slow) var(--ease-out);
+}
+
+.wdl__seg--white { background: var(--piece-white); }
+.wdl__seg--draw { background: #64748b; }
+.wdl__seg--black { background: #020617; box-shadow: inset 0 0 0 1px var(--border-strong); }
+
+.wdl__legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-label);
+  color: var(--text-3);
+}
+
+.wdl__legend .num {
+  color: var(--text-1);
+}
+
+.wdl-skeleton {
+  height: 34px;
+}
+
+.outlook-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: var(--text-small);
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.outlook-status .live-dot { animation-duration: 2.4s; }
+.outlook-status--good .live-dot { color: var(--good); }
+.outlook-status--accent .live-dot { color: var(--accent); }
+.outlook-status--warn .live-dot { color: var(--warn); }
+.outlook-status--danger { background: var(--danger-soft); color: #fecaca; }
+.outlook-status--danger .live-dot { color: var(--danger); }
+
+/* Coach */
+.coach.has-advice {
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+.coach-ask {
+  flex-shrink: 0;
+}
+
+.coach-loading {
+  display: grid;
+  gap: 10px;
+}
+
+.coach-advice {
+  display: grid;
+  gap: 12px;
+  animation: rise-in var(--dur-med) var(--ease-out) both;
+}
+
+.coach-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coach-source {
+  font-size: var(--text-label);
+  color: var(--text-3);
+}
+
+.coach-headline {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.coach-threat {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--warn-soft);
+  color: #fde68a;
+  font-size: var(--text-small);
+}
+
+.coach-threat svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.coach-rec {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coach-rec__label {
+  font-size: var(--text-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.coach-rec__move {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--good-soft);
+  color: var(--good);
+  font-weight: 500;
+}
+
+.coach-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.coach-tag {
+  font-size: var(--text-label);
+  color: var(--accent);
+}
+
+/* Threats */
+.threats-clear {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+}
+
+.threats-clear svg {
+  color: var(--good);
+  flex-shrink: 0;
+}
+
+.threat-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.threat {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  cursor: default;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.threat:hover,
+.threat:focus-visible {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: var(--danger-soft);
+  outline: none;
+}
+
+.threat__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.threat--hanging .threat__icon,
+.threat--check .threat__icon {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.threat--pinned .threat__icon {
+  color: var(--violet);
+  background: var(--violet-soft);
+}
+
+.threat__text {
+  display: grid;
+  min-width: 0;
+  font-size: var(--text-small);
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+.threat__text strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.threat__sq {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  font-size: var(--text-label);
+  color: var(--text-1);
+  text-transform: uppercase;
+}

@@ -1,3 +1,4 @@
+import "./SettingsModal.css";
 import React from "react";
 import { X, Volume2, VolumeX, Trash2 } from "lucide-react";
 

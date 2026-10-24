@@ -24,7 +24,15 @@ Run from the repo root unless noted.
 - Load models once per process through module-level singletons (`get_blunder_model()`); never inside a request handler.
 - Don't swallow exceptions silently. The coach path has several `except Exception: pass` blocks that hide real bugs; log or narrow any you touch.
 - `/tactical-analysis` and `/coach-advice` in `api.py` duplicate the same analysis pipeline. Change both, or better, extract a shared helper.
-- Threat motif names must match between `_detect_tactical_threats` (`api.py`) and the branches in `coach.py` (today: `"pinned"` vs `"pin"`).
+- Threat motif names must match between `_detect_tactical_threats` (`api.py`) and the branches in `coach.py` (the coach accepts both `"pinned"` and `"pin"`).
+
+## Frontend structure
+
+- `src/styles/`: `tokens.css` (colour, type, spacing and motion tokens), `base.css`, `layout.css` (`.app-shell`, `.workspace`, and the `.card`, `.btn`, `.pill`, `.segmented`, `.meter` and `.data-table` primitives), `motion.css` (shared keyframes, plus the reduced-motion kill switch). `styles.css` only imports them, and `main.tsx` must import it before `App` so component sheets win the cascade.
+- Every component imports its own colocated `<Name>.css`. Use tokens (`var(--accent)`, `var(--card-pad)` and so on) rather than hex values or one-off sizes.
+- Grid containers need `grid-template-columns: minmax(0, 1fr)`. Implicit `auto` tracks grow to their widest child and cause sideways scrolling on phones.
+- Arena layout: `components/arena/` (`ArenaView` takes slot props; the sidebar cards are `OutlookCard`, `CoachCard`, `ThreatRadarCard`). Review lives in `components/review/`.
+- Candidate-move scores from the API are from the side to move's point of view. Convert them to White's before showing an eval.
 
 ## Skills and MCP
 

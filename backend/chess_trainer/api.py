@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 import math
 
@@ -15,8 +17,27 @@ from .maia import MaiaConfigurationError, MaiaEngine
 from .territory import compute_territory_control, TerritoryControlResponse
 from .profiler import compute_blunder_dna, BlunderDnaResponse
 from .traps import get_all_traps, get_trap_by_id, TrapDrill
+from .coach import CoachExplanation, build_tactical_context, generate_agentic_coach_advice
 
-app = FastAPI(title="Chess Blunder Trainer", version="0.1.0")
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pre-cache singleton Random Forest model on application startup
+    if settings.model_path.exists():
+        try:
+            get_blunder_model()
+            logger.info("BlunderModel singleton pre-cached successfully on startup.")
+        except Exception as exc:
+            logger.warning(f"Could not pre-cache BlunderModel on startup: {exc}")
+    # Verify engine configurations (non-fatal warning if absent)
+    if settings.stockfish_path and not settings.stockfish_path.exists():
+        logger.warning(f"Stockfish executable not found at configured path: {settings.stockfish_path}")
+    yield
+
+
+app = FastAPI(title="Chess Blunder Trainer", version="0.1.0", lifespan=lifespan)
 allowed_origins = [origin.strip() for origin in settings.frontend_origins.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
@@ -585,4 +606,69 @@ def trap_puzzle(trap_id: str) -> TrapDrill:
     if not trap:
         raise HTTPException(status_code=404, detail="Trap puzzle not found")
     return trap
+
+
+class CoachAdviceRequest(BaseModel):
+    fen: str
+    rating: int = Field(default=1200, ge=400, le=3000)
+    archetype: str | None = None
+    opening_name: str | None = None
+    api_key: str | None = None
+
+
+@app.post("/coach-advice", response_model=CoachExplanation)
+def coach_advice(req: CoachAdviceRequest) -> CoachExplanation:
+    try:
+        board = chess.Board(req.fen)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid FEN: {exc}") from exc
+
+    threats = _detect_tactical_threats(board)
+    candidate_moves: list[CandidateMove] = []
+    eval_centipawns = 0
+
+    if settings.stockfish_path is not None and settings.stockfish_path.exists():
+        try:
+            with StockfishEvaluator(settings.stockfish_path, depth=8) as evaluator:
+                raw_candidates = evaluator.candidate_moves(board, count=3)
+                if raw_candidates:
+                    eval_centipawns = raw_candidates[0][1]
+                    for move, score in raw_candidates:
+                        loss = max(0, eval_centipawns - score)
+                        candidate_moves.append(
+                            CandidateMove(
+                                uci=move.uci(),
+                                san=board.san(move),
+                                evaluation_centipawns=score,
+                                loss_centipawns=loss,
+                                classification="best" if loss == 0 else "good" if loss <= 35 else "mistake",
+                                win_probability=1.0 / (1.0 + math.pow(10, -score / 400.0)),
+                                blunder_probability=0.15,
+                            )
+                        )
+        except Exception:
+            pass
+
+    overall_prob = 0.15
+    model = get_blunder_model()
+    if model is not None:
+        try:
+            feats = extract_features(board, rating=req.rating)
+            overall_prob = float(model.predict_proba([feats])[0][1])
+        except Exception:
+            pass
+
+    ctx = build_tactical_context(
+        board=board,
+        engine_eval_cp=eval_centipawns,
+        blunder_probability=overall_prob,
+        risk_band=_risk_band(overall_prob),
+        opening_name=req.opening_name or "Standard Opening",
+        archetype=req.archetype,
+        candidate_moves=candidate_moves,
+        threats=threats,
+    )
+
+    return generate_agentic_coach_advice(ctx, api_key=req.api_key)
+
 

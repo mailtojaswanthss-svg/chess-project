@@ -176,3 +176,26 @@ def test_tactical_analysis_pin_threat_accuracy():
     assert "Bishop" in pinned_threats[0]["description"]
 
 
+
+
+def test_coach_advice_endpoint():
+    client = TestClient(app)
+    fen = "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/3P1N2/PPP2PPP/RNBQ1RK1 b kq - 0 5"
+    resp = client.post(
+        "/coach-advice",
+        json={"fen": fen, "rating": 1400, "archetype": "Overloaded Defender"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "headline" in data
+    assert "concept" in data
+    assert "explanation" in data
+    assert "threat_summary" in data
+    assert "recommended_move" in data
+    assert isinstance(data["tactical_tags"], list)
+
+
+def test_coach_advice_rejects_invalid_fen():
+    client = TestClient(app)
+    resp = client.post("/coach-advice", json={"fen": "invalid_fen_string", "rating": 1200})
+    assert resp.status_code == 422

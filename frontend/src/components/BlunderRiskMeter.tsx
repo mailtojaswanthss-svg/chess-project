@@ -10,8 +10,10 @@ import {
   Shield,
   Sparkles,
   Swords,
+  Brain,
+  Loader2,
 } from "lucide-react";
-import type { Analysis, SavedGame, TacticalAnalysis } from "../types/chess";
+import type { Analysis, SavedGame, TacticalAnalysis, CoachExplanation } from "../types/chess";
 import { riskFor, coachingTakeaway } from "../utils/chessUtils";
 
 interface BlunderRiskMeterProps {
@@ -24,6 +26,9 @@ interface BlunderRiskMeterProps {
   lastMoveSan?: string;
   rating: number;
   outcome?: SavedGame | null;
+  coachAdvice?: CoachExplanation | null;
+  onFetchCoachAdvice?: () => void;
+  isFetchingCoachAdvice?: boolean;
   onHoverCandidateMove?: (uci: string | null) => void;
   onHoverThreatSquare?: (square: string | null) => void;
 }
@@ -36,12 +41,15 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
   isCheck,
   moveCount,
   lastMoveSan,
-  rating,
+  rating: _rating,
   outcome,
-  onHoverCandidateMove,
+  coachAdvice,
+  onFetchCoachAdvice,
+  isFetchingCoachAdvice,
+  onHoverCandidateMove: _onHoverCandidateMove,
   onHoverThreatSquare,
 }) => {
-  // If the game has completed, show the terminal state instead of stale metrics
+  // Terminal state display
   if (outcome) {
     const isWhiteWin = outcome.result.toLowerCase().includes("white wins");
     const isBlackWin = outcome.result.toLowerCase().includes("black wins");
@@ -59,14 +67,14 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
           </div>
           <div className="risk-badge">
             <span className="dot pulse" />
-            <span>GAME TERMINATED</span>
+            <span>GAME CONCLUDED</span>
           </div>
         </div>
 
         <div className="risk-main-display">
           <div className="risk-number-wrap">
             <span className="risk-number">{isDraw ? "½-½" : isWhiteWin ? "1-0" : "0-1"}</span>
-            <span className="risk-sub-label">Final Game Result</span>
+            <span className="risk-sub-label">Final Match Score</span>
           </div>
 
           <div className="risk-visual-gauge">
@@ -88,10 +96,10 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
           </div>
           <div className="factors-list">
             <div className="factor-pill danger">
-              <span className="dot pulse" /> No legal moves remaining. Game concluded after {outcome.moves.length} plies.
+              <span className="dot pulse" /> Game concluded after {outcome.moves.length} plies.
             </div>
             <div className="factor-pill success">
-              <RotateCcw size={13} /> Click <strong>Undo Last Move</strong> above to explore alternative defenses.
+              <RotateCcw size={13} /> Click <strong>Undo</strong> above or review in Settings &amp; Archive.
             </div>
           </div>
         </div>
@@ -107,10 +115,7 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
   const percentage = Math.round(prob * 100);
   const riskInfo = riskFor(prob);
   const activeSideLabel = sideToMove === "w" ? "White" : "Black";
-  const activeSidePiece = sideToMove === "w" ? "♔" : "♚";
-
   const threats = tacticalAnalysis?.threats || [];
-  const candidateMoves = tacticalAnalysis?.candidate_moves || [];
   const winChances = tacticalAnalysis?.win_chances;
 
   return (
@@ -118,10 +123,10 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
       {/* 1. Header with Turn & Risk Badge */}
       <div className="risk-card-header">
         <div className="active-turn-pill">
-          <span className="piece-icon">{activeSidePiece}</span>
+          <span className="piece-icon">{sideToMove === "w" ? "♔" : "♚"}</span>
           <div>
             <strong className="turn-title">{activeSideLabel} to move</strong>
-            <span className="turn-sub">Assessing {activeSideLabel}&apos;s blunder likelihood</span>
+            <span className="turn-sub">Calibrated Cognitive Tension</span>
           </div>
         </div>
         <div className="risk-badge">
@@ -159,7 +164,7 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
         </div>
       </div>
 
-      {/* 3. Statistical Win/Draw/Loss Model Bar */}
+      {/* 3. Win / Draw / Loss Probability Distribution */}
       {winChances && (
         <div className="win-chances-widget">
           <div className="win-chances-labels">
@@ -187,7 +192,66 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
         </div>
       )}
 
-      {/* 4. Tactical Threat Radar */}
+      {/* 4. Grandmaster AI Coach Guidance */}
+      <div className="coach-advice-box gm-coach-box">
+        <div className="coach-advice-header">
+          <div className="coach-header-left">
+            <Brain size={15} className="text-cyan" />
+            <strong className="coach-header-title">GRANDMASTER AI COACH</strong>
+          </div>
+          {onFetchCoachAdvice && (
+            <button
+              className="gm-ask-btn"
+              onClick={onFetchCoachAdvice}
+              disabled={isFetchingCoachAdvice}
+              title="Query Agentic Coach for deep pedagogical reasoning"
+            >
+              {isFetchingCoachAdvice ? (
+                <>
+                  <Loader2 size={11} className="spin" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={11} />
+                  <span>{coachAdvice ? "Re-Analyze" : "Ask GM Coach"}</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {coachAdvice ? (
+          <div className="gm-advice-content">
+            <div className="gm-concept-row">
+              <span className="gm-concept-pill">👑 {coachAdvice.concept}</span>
+              <span className="gm-source-tag">{coachAdvice.engine_source}</span>
+            </div>
+            <h4 className="gm-headline">"{coachAdvice.headline}"</h4>
+            <p className="coach-advice-text gm-explanation">{coachAdvice.explanation}</p>
+            {coachAdvice.threat_summary && (
+              <div className="gm-threat-alert">
+                <AlertTriangle size={12} className="text-amber" />
+                <span><strong>Opponent Threat:</strong> {coachAdvice.threat_summary}</span>
+              </div>
+            )}
+            <div className="gm-rec-row">
+              <span className="gm-rec-tag">Recommended: <strong>{coachAdvice.recommended_move}</strong></span>
+              <div className="gm-tags">
+                {coachAdvice.tactical_tags.map((tag, i) => (
+                  <span key={i} className="gm-tag">#{tag}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="coach-advice-text">
+            {tacticalAnalysis?.coach_explanation || riskInfo.description}
+          </p>
+        )}
+      </div>
+
+      {/* 5. Tactical Threat Radar */}
       <div className="tactical-threat-radar">
         <div className="threat-radar-header">
           <div className="threat-radar-title">
@@ -233,65 +297,7 @@ export const BlunderRiskMeter: React.FC<BlunderRiskMeterProps> = ({
         )}
       </div>
 
-      {/* 5. Top Candidate Moves Matrix (Stockfish 16) */}
-      {candidateMoves.length > 0 && (
-        <div className="candidate-moves-section">
-          <div className="candidates-header">
-            <Sparkles size={13} className="candidates-header-icon" />
-            <span>CANDIDATE MOVES (MULTI-PV)</span>
-          </div>
-          <div className="candidates-table">
-            {candidateMoves.map((cand, idx) => {
-              const evalPawns = (cand.centipawns / 100).toFixed(2);
-              const evalSign = cand.centipawns > 0 ? "+" : "";
-              const candRisk = Math.round(cand.blunder_probability * 100);
-
-              return (
-                <div
-                  key={idx}
-                  className={`candidate-row ${cand.classification}`}
-                  onMouseEnter={() => onHoverCandidateMove?.(cand.uci)}
-                  onMouseLeave={() => onHoverCandidateMove?.(null)}
-                  title={`Hover to visualize ${cand.san} on board · Eval: ${evalSign}${evalPawns} · Opponent Response Risk: ${candRisk}%`}
-                >
-                  <div className="cand-rank-san">
-                    <span className={`cand-badge ${cand.classification}`}>
-                      {cand.classification.toUpperCase()}
-                    </span>
-                    <strong className="cand-san">{cand.san}</strong>
-                  </div>
-                  <div className="cand-meta">
-                    <span className="cand-eval" title="Stockfish Centipawn Evaluation">
-                      {evalSign}{evalPawns}
-                    </span>
-                    <span
-                      className={`cand-blunder-risk ${
-                        candRisk >= 65 ? "high" : candRisk >= 35 ? "med" : "low"
-                      }`}
-                      title="Predicted Opponent Blunder Likelihood in the resulting position"
-                    >
-                      Opp. Risk: {candRisk}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 6. Coach Natural Language Insight */}
-      <div className="coach-advice-box">
-        <div className="coach-advice-header">
-          <Info size={12} />
-          <span>TACTICAL COACH INSIGHT ({rating} ELO MODEL)</span>
-        </div>
-        <p className="coach-advice-text">
-          {tacticalAnalysis?.coach_explanation || riskInfo.description}
-        </p>
-      </div>
-
-      {/* 7. Position Diagnostics */}
+      {/* 6. Position Diagnostics & Status Signals */}
       <div className="tactical-factors-section">
         <div className="factors-heading">
           <Info size={12} />

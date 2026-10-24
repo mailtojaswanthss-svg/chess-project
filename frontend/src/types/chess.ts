@@ -11,8 +11,19 @@ export type Analysis = {
   side_to_move?: "w" | "b";
 };
 
-export type PlayMode = "coach" | "stockfish" | "trap" | "maia";
-export type AppTab = "play" | "review" | "trap_drill" | "blunder_dna" | "games" | "about";
+export type PlayMode = "free_lab" | "max_engine" | "human_sparring" | "tricky_bot";
+export type AppTab = "arena" | "trap_dojo" | "blunder_dna" | "academy" | "settings";
+
+export interface AcademyLesson {
+  id: string;
+  title: string;
+  pillar: "opening" | "middlegame" | "endgame" | "defense";
+  subtitle: string;
+  fen: string;
+  objective: string;
+  keyPoints: string[];
+  difficulty: "Beginner" | "Intermediate" | "Master";
+}
 
 export type BotMove = {
   fen: string;
@@ -122,7 +133,7 @@ export type SavedGame = {
   moves: string[];
   pgn: string;
   playerColor?: "w" | "b";
-  mode?: PlayMode;
+  mode?: PlayMode | string;
   rating?: number;
 };
 
@@ -188,7 +199,7 @@ export type BlunderDnaReport = {
 export type TrapDrill = {
   id: string;
   title: string;
-  difficulty: "Beginner" | "Intermediate" | "Advanced";
+  difficulty: "Beginner" | "Intermediate" | "Advanced" | "Master";
   theme: string;
   side_to_move: "White" | "Black";
   fen: string;
@@ -198,4 +209,16 @@ export type TrapDrill = {
   prompt: string;
   trap_explanation: string;
   punishment_line: string[];
+};
+
+
+export type CoachExplanation = {
+  headline: string;
+  concept: string;
+  explanation: string;
+  threat_summary: string;
+  recommended_move: string;
+  tactical_tags: string[];
+  confidence: number;
+  engine_source: string;
 };

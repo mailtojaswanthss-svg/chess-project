@@ -30,14 +30,14 @@ class StockfishEvaluator:
 
     def score(self, board: chess.Board) -> int:
         try:
-            score = self.engine.analyse(board, chess.engine.Limit(depth=self.depth))["score"]
+            score = self.engine.analyse(board, chess.engine.Limit(depth=self.depth, time=0.35))["score"]
             return int(score.pov(board.turn).score(mate_score=100000))
         except (chess.engine.EngineError, KeyError, TypeError) as exc:
             raise EngineConfigurationError(f"Stockfish evaluation failed: {exc}") from exc
 
     def best_move(self, board: chess.Board) -> tuple[chess.Move, int]:
         try:
-            result = self.engine.analyse(board, chess.engine.Limit(depth=self.depth))
+            result = self.engine.analyse(board, chess.engine.Limit(depth=self.depth, time=0.35))
             move = result["pv"][0]
             score = int(result["score"].pov(board.turn).score(mate_score=100000))
             return move, score
@@ -48,7 +48,7 @@ class StockfishEvaluator:
         try:
             results = self.engine.analyse(
                 board,
-                chess.engine.Limit(depth=self.depth),
+                chess.engine.Limit(depth=self.depth, time=0.35),
                 multipv=max(1, min(count, 10)),
             )
             return [

@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-  ShieldAlert,
-  Flame,
   Brain,
   Crosshair,
   TrendingUp,
   Sparkles,
-  Info,
   RefreshCw,
   Award,
   CheckCircle2,
   AlertOctagon,
+  Flame,
+  ArrowRight,
+  GraduationCap,
 } from "lucide-react";
 import type { BlunderDnaReport, BlunderDnaDimensions, SavedGame } from "../types/chess";
 import { playSound } from "../utils/audio";
@@ -18,6 +18,7 @@ import { playSound } from "../utils/audio";
 interface BlunderDnaProfilerProps {
   savedGames: SavedGame[];
   apiUrl?: string;
+  onNavigateAcademy?: (lessonId?: string) => void;
 }
 
 const PRESET_ARCHETYPES: Record<string, { dims: BlunderDnaDimensions; name: string; title: string }> = {
@@ -48,7 +49,11 @@ const PRESET_ARCHETYPES: Record<string, { dims: BlunderDnaDimensions; name: stri
   },
 };
 
-export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGames, apiUrl = "http://127.0.0.1:8000" }) => {
+export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({
+  savedGames,
+  apiUrl = "http://127.0.0.1:8000",
+  onNavigateAcademy,
+}) => {
   const [profile, setProfile] = useState<BlunderDnaReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedAxis, setSelectedAxis] = useState<string | null>(null);
@@ -104,7 +109,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
   useEffect(() => {
     const pgns = savedGames.map((g) => g.pgn).filter(Boolean);
     fetchProfile(pgns);
-  }, [savedGames]);
+  }, [savedGames]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPreset = (key: string) => {
     playSound("click");
@@ -122,81 +127,76 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
         title: p.title,
         quote:
           key === "swashbuckler"
-            ? "Charges forward with aggressive flair, but leaves pawns and bishops defenseless."
+            ? "Charges fearlessly into tactical firestorms, sacrificing structure for rapid tactical blows."
             : key === "tunnelVision"
-            ? "Pushes aggressively toward the enemy King while their own back rank is a death trap."
+            ? "Laser-focused on the opponent's king while neglecting foundational back-rank corridors."
             : key === "glassCannon"
-            ? "Incredible dynamic firepower, but a single deflected defender shatters the entire defense."
+            ? "Deploys devastating attacking ideas, but crumbles when defenders are deflected."
             : key === "speedster"
-            ? "Rapid intuitive play that excels early but collapses in late-game scrambles."
-            : "Effortless positional prophylaxis and ironclad tactical hygiene.",
+            ? "Plays with instinctive lightning speed, but bleeds tactical accuracy in acute scrambles."
+            : "Patient, deeply calculating positional master with near-zero tactical oversights.",
         badge_color:
           key === "swashbuckler"
-            ? "#ef4444"
+            ? "#f97316"
             : key === "tunnelVision"
-            ? "#8b5cf6"
+            ? "#ef4444"
             : key === "glassCannon"
             ? "#ec4899"
             : key === "speedster"
-            ? "#06b6d4"
+            ? "#eab308"
             : "#10b981",
         dominant_flaw:
           key === "swashbuckler"
-            ? "Hanging Pieces"
+            ? "Hanging Pieces (82% Leak Rate)"
             : key === "tunnelVision"
-            ? "Back-Rank Vulnerability"
+            ? "Back-Rank Corridor Blindspot (88% Leak Rate)"
             : key === "glassCannon"
-            ? "Overloaded Defenders"
+            ? "Overloaded Defenders (85% Leak Rate)"
             : key === "speedster"
-            ? "Time Scramble Deterioration"
-            : "Minimal Systematic Flaws",
-        strengths:
-          key === "grandmaster"
-            ? ["Pawn structure hygiene", "Deep defensive radar", "Calculated piece harmony"]
-            : ["Aggressive initiative", "Dynamic tactical imagination", "King assault instincts"],
-        blind_spots:
-          key === "grandmaster"
-            ? ["Overly risk-averse in chaotic counter-attacks"]
-            : ["Neglects prophylactic defensive checks", "Leaves key defenders overworked"],
+            ? "Time Scramble Blunders (85% Leak Rate)"
+            : "Subtle Pawn Structure Imbalances (19% Leak Rate)",
+        strengths: ["Dynamic initiative", "Flank breakthroughs", "Uncompromising fighting spirit"],
+        blind_spots: ["Tactical prophylaxis", "Defensive patience", "Proactive King safety"],
         training_prescription:
           key === "swashbuckler"
-            ? "Implement a mandatory 3-second 'LPDO' scan before releasing pieces."
+            ? "Drill Nunn's LPDO rule on every candidate move."
             : key === "tunnelVision"
-            ? "Make creating 'luft' (h3/h6) standard procedure before heavy piece incursions."
+            ? "Create luft (h3/h6) prior to opening heavy piece infiltration lines."
             : key === "glassCannon"
-            ? "Track secondary duties of all defensive anchor pieces."
+            ? "Anchor primary defenders with redundant support."
             : key === "speedster"
-            ? "Pace your calculation clock and practice endgame transition fundamentals."
-            : "Study subtle master endgame conversions and positional sacrifice theory.",
+            ? "Practice deliberate clock management in endgame transitions."
+            : "Refine nuanced minority attacks and bishop vs knight endgames.",
       },
       resilience_score: resilience,
-      games_analyzed: 12,
-      blunders_detected: Math.round(avg * 0.2),
+      games_analyzed: 42,
+      blunders_detected: Math.round(avg * 0.8),
       critical_advice: [
-        "Master the defense of key tactical anchors before initiating multi-piece sacrifices.",
-        "Prophylactically safeguard escape squares for your King.",
+        "Proactively reinforce threatened anchor pieces before advancing.",
+        "Verify your King escape corridor before exchanging queens.",
+        "Calculate forced checks and captures before intuitive development.",
       ],
     });
   };
 
-  const dims = profile?.dimensions ?? {
-    pins: 40,
-    hanging_pieces: 55,
-    overloaded_defenders: 45,
+  const dims = profile?.dimensions || {
+    pins: 35,
+    hanging_pieces: 45,
+    overloaded_defenders: 40,
     back_rank: 30,
-    time_scramble: 40,
+    time_scramble: 50,
     pawn_structure: 35,
   };
 
-  // Radar Chart Geometry (Center at 180, 165, Radius = 100)
   const cx = 180;
-  const cy = 165;
+  const cy = 160;
   const r = 100;
+
   const axes = [
     { key: "pins", label: "Pins & Skewers", value: dims.pins, angle: -90 },
     { key: "hanging_pieces", label: "Hanging Pieces", value: dims.hanging_pieces, angle: -30 },
-    { key: "overloaded_defenders", label: "Overloaded", value: dims.overloaded_defenders, angle: 30 },
-    { key: "back_rank", label: "Back-Rank", value: dims.back_rank, angle: 90 },
+    { key: "overloaded_defenders", label: "Overloaded Def.", value: dims.overloaded_defenders, angle: 30 },
+    { key: "back_rank", label: "Back Rank", value: dims.back_rank, angle: 90 },
     { key: "time_scramble", label: "Time Scramble", value: dims.time_scramble, angle: 150 },
     { key: "pawn_structure", label: "Pawn Structure", value: dims.pawn_structure, angle: 210 },
   ];
@@ -215,45 +215,65 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
     return `${pt.x},${pt.y}`;
   }).join(" ");
 
-  const axisDetails: Record<string, { desc: string; cure: string }> = {
+  const axisDetails: Record<string, { desc: string; cure: string; lessonTarget: string }> = {
     pins: {
-      desc: "Pieces trapped on the same rank, file, or diagonal as higher value targets (King, Queen, Rook).",
-      cure: "Immediately step off alignment lines whenever opponent rooks or bishops sight your royal pieces.",
+      desc: "Pieces trapped on the same rank, file, or diagonal as higher value royal targets.",
+      cure: "Step off alignment lines immediately whenever enemy rooks or bishops sight royal pieces.",
+      lessonTarget: "Middlegame Warfare & Absolute Pins",
     },
     hanging_pieces: {
-      desc: "Leaving minor or major pieces without friendly defenders while attacked by enemy pieces.",
+      desc: "Leaving minor or major pieces without friendly defenders while exposed to enemy strike vectors.",
       cure: "Form the habit of LPDO (Loose Pieces Drop Off) — every move must verify all pieces are anchored.",
+      lessonTarget: "Opening Mastery & Dynamic Outposts",
     },
     overloaded_defenders: {
       desc: "A piece tasked with protecting multiple squares or pieces simultaneously. When deflected, defense collapses.",
       cure: "Introduce redundant defenders or remove the underlying threat so single pieces don't shoulder double duties.",
+      lessonTarget: "The Art of Defense & Prophylaxis",
     },
     back_rank: {
       desc: "King trapped on the back rank behind a pawn barrier without an escape square ('luft').",
       cure: "Play h3 (or h6 for Black) to grant your King an escape hatch before launching heavy rooks into combat.",
+      lessonTarget: "The Art of Defense & Parrying Swindles",
     },
     time_scramble: {
-      desc: "Sudden spike in tactical blunders occurring after move 30 or in accelerated endgame scrambles.",
+      desc: "Sudden spike in tactical blunders occurring after move 30 or in accelerated clock situations.",
       cure: "Slow down when entering complex transitions; simplify into solid pawn endings when ahead.",
+      lessonTarget: "Endgame Precision & Lucena Technique",
     },
     pawn_structure: {
       desc: "Creating isolated, doubled, or backward pawns that become chronic long-term tactical targets.",
       cure: "Calculate pawn trades carefully to avoid leaving backward pawns on half-open files.",
+      lessonTarget: "Opening Mastery & Pawn Breaks",
     },
   };
 
+  // Top 3 tactical leaks for "Fix Your Leaks" cards
+  const topLeaks = [...axes].sort((a, b) => b.value - a.value).slice(0, 3);
+
   return (
     <div className="blunder-dna-container">
-      {/* 1. Header Banner */}
+      {/* 1. Archetype Hero Banner with High Contrast */}
       <div className="dna-hero-header">
-        <div className="dna-badge-pill">
-          <Brain size={16} className="text-cyan" />
-          <span>NEURAL BEHAVIORAL PROFILER</span>
+        <div className="dna-hero-top-row">
+          <div className="dna-badge-pill">
+            <Brain size={16} className="text-cyan" />
+            <span>NEURAL BEHAVIORAL PROFILER</span>
+          </div>
+          {profile && (
+            <div
+              className="archetype-hero-badge"
+              style={{ borderColor: profile.archetype.badge_color, color: profile.archetype.badge_color }}
+            >
+              ★ {profile.archetype.name.toUpperCase()}
+            </div>
+          )}
         </div>
-        <h2>Personal &quot;Blunder DNA&quot; Radar</h2>
-        <p>
-          Deep psychological and tactical archetype diagnostics measuring recurring error vectors across 6 core
-          chess vulnerability dimensions.
+
+        <h2 className="dna-hero-title">Personal &quot;Tactical DNA&quot; Radar</h2>
+        <p className="dna-hero-summary">
+          {profile?.archetype.quote ||
+            "Deep psychological and tactical archetype diagnostics measuring recurring error vectors across 6 core vulnerability dimensions."}
         </p>
 
         {/* Preset Selector */}
@@ -281,13 +301,13 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
         </div>
       </div>
 
-      {/* 2. Main Grid: Radar on Left, Archetype Dossier on Right */}
+      {/* 2. Main Grid: Centerpiece Radar on Left, Archetype Dossier on Right */}
       <div className="dna-grid">
         {/* Left: SVG Radar Chart */}
         <div className="dna-card radar-card">
           <div className="card-top-title">
             <Crosshair size={16} className="text-cyan" />
-            <span>TACTICAL WEAKNESS RADAR</span>
+            <strong className="high-contrast-heading">TACTICAL VULNERABILITY RADAR</strong>
             <span className="info-hint">Click any axis to inspect</span>
           </div>
 
@@ -349,7 +369,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
                 );
               })}
 
-              {/* Axis Labels */}
+              {/* Explicit Axis Labels with High Contrast */}
               {axes.map((a) => {
                 const labelDist = 124;
                 const rad = (a.angle * Math.PI) / 180;
@@ -418,7 +438,7 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
         <div className="dna-card dossier-card">
           <div className="card-top-title">
             <Award size={16} className="text-gold" />
-            <span>TACTICAL ARCHETYPE PROFILE</span>
+            <strong className="high-contrast-heading">TACTICAL ARCHETYPE PROFILE</strong>
           </div>
 
           {profile && (
@@ -492,7 +512,9 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
                   <span className="telemetry-desc">Games Evaluated</span>
                 </div>
                 <div className="telemetry-item">
-                  <span className="telemetry-num">{axes.reduce((a, b) => a + b.value, 0) / 6 < 40 ? "Low" : "Moderate"}</span>
+                  <span className="telemetry-num">
+                    {axes.reduce((a, b) => a + b.value, 0) / 6 < 40 ? "Low" : "Moderate"}
+                  </span>
                   <span className="telemetry-desc">Error Volatility</span>
                 </div>
                 <div className="telemetry-item">
@@ -502,6 +524,64 @@ export const BlunderDnaProfiler: React.FC<BlunderDnaProfilerProps> = ({ savedGam
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* 3. "Fix Your Leaks" Actionable Cards (Phase 4) */}
+      <div className="dna-leaks-section">
+        <div className="leaks-section-header">
+          <div className="leaks-title-wrap">
+            <Flame size={18} className="text-danger" />
+            <h3 className="leaks-title">Fix Your Primary Tactical Leaks</h3>
+          </div>
+          <span className="leaks-subtitle">Targeted drills to permanently raise your tactical resilience rating</span>
+        </div>
+
+        <div className="leaks-grid">
+          {topLeaks.map((leak, idx) => {
+            const details = axisDetails[leak.key];
+            const tone = leak.value >= 60 ? "danger" : leak.value >= 35 ? "warning" : "safe";
+
+            return (
+              <div key={leak.key} className={`leak-card ${tone}`}>
+                <div className="leak-card-top">
+                  <div className="leak-badge-wrap">
+                    <span className="leak-rank-num">#{idx + 1} Leak</span>
+                    <strong className="leak-name">{leak.label}</strong>
+                  </div>
+                  <span className={`leak-val-tag ${tone}`}>{leak.value}% Error Rate</span>
+                </div>
+
+                {/* Visual Progress Bar */}
+                <div className="leak-progress-track">
+                  <div
+                    className={`leak-progress-fill ${tone}`}
+                    style={{ width: `${Math.max(8, leak.value)}%` }}
+                  />
+                </div>
+
+                <p className="leak-desc">{details?.desc || "Recurring tactical blindspot observed in match play."}</p>
+
+                <div className="leak-prescription-row">
+                  <Sparkles size={13} className="text-cyan" />
+                  <span>{details?.cure}</span>
+                </div>
+
+                <button
+                  className="leak-train-btn"
+                  onClick={() => {
+                    playSound("click");
+                    onNavigateAcademy?.(leak.key);
+                  }}
+                  title={`Train ${leak.label} in Chess Academy`}
+                >
+                  <GraduationCap size={15} />
+                  <span>Train This Skill in Academy</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

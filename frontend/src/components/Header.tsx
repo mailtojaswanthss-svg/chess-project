@@ -8,7 +8,8 @@ import {
   BrainCircuit,
   Target,
   Dna,
-  ShieldAlert,
+  Swords,
+  GraduationCap,
 } from "lucide-react";
 import type { AppTab, ModelHealth } from "../types/chess";
 import { playSound } from "../utils/audio";
@@ -43,55 +44,49 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="topbar">
-      <div className="brand" onClick={() => handleTab("play")} style={{ cursor: "pointer" }}>
+      <div className="brand" onClick={() => handleTab("arena")} style={{ cursor: "pointer" }}>
         <div className="brand-mark">
           <Gauge size={20} strokeWidth={2.5} />
         </div>
         <div className="brand-text">
           <div className="brand-title-wrap">
-            <strong>chesswise</strong>
+            <strong>ChessWise AI</strong>
             <span className="brand-badge">PRE-COGNITIVE ENGINE</span>
           </div>
-          <span className="brand-sub">AI Blunder Guard &amp; Behavioral Observatory</span>
+          <span className="brand-sub">Grandmaster Tactical Lab &amp; Blunder Intelligence</span>
         </div>
       </div>
 
       <nav className="main-tabs" aria-label="Main Navigation">
         <button
-          className={`main-tab ${activeTab === "play" ? "active" : ""}`}
-          onClick={() => handleTab("play")}
+          className={`main-tab ${activeTab === "arena" ? "active" : ""}`}
+          onClick={() => handleTab("arena")}
         >
-          <span className="tab-icon">♟</span> Play &amp; Train
+          <Swords size={14} style={{ marginRight: 6 }} /> Tactical Arena
         </button>
         <button
-          className={`main-tab ${activeTab === "review" ? "active" : ""}`}
-          onClick={() => handleTab("review")}
+          className={`main-tab ${activeTab === "trap_dojo" ? "active" : ""}`}
+          onClick={() => handleTab("trap_dojo")}
         >
-          <span className="tab-icon">🔍</span> Game Review (CAPS)
-        </button>
-        <button
-          className={`main-tab ${activeTab === "trap_drill" ? "active" : ""}`}
-          onClick={() => handleTab("trap_drill")}
-        >
-          <Target size={14} style={{ marginRight: 5 }} /> Spot the Trap
+          <Target size={14} style={{ marginRight: 6 }} /> Trap Dojo
         </button>
         <button
           className={`main-tab ${activeTab === "blunder_dna" ? "active" : ""}`}
           onClick={() => handleTab("blunder_dna")}
         >
-          <Dna size={14} style={{ marginRight: 5 }} /> Tactical DNA
+          <Dna size={14} style={{ marginRight: 6 }} /> Tactical DNA
         </button>
         <button
-          className={`main-tab ${activeTab === "games" ? "active" : ""}`}
-          onClick={() => handleTab("games")}
+          className={`main-tab ${activeTab === "academy" ? "active" : ""}`}
+          onClick={() => handleTab("academy")}
         >
-          <span className="tab-icon">📚</span> Archive
+          <GraduationCap size={15} style={{ marginRight: 6 }} /> Chess Academy
         </button>
         <button
-          className={`main-tab ${activeTab === "about" ? "active" : ""}`}
-          onClick={() => handleTab("about")}
+          className={`main-tab ${activeTab === "settings" ? "active" : ""}`}
+          onClick={() => handleTab("settings")}
         >
-          <BrainCircuit size={14} style={{ marginRight: 5 }} /> Tactical Observatory
+          <Settings2 size={14} style={{ marginRight: 6 }} /> Settings &amp; Archive
         </button>
       </nav>
 

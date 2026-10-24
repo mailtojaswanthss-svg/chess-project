@@ -1,10 +1,11 @@
 import React from "react";
-import { Download, Trash2, Play, Inbox } from "lucide-react";
+import { Download, Trash2, Play, Inbox, Eye } from "lucide-react";
 import type { SavedGame } from "../types/chess";
 
 interface MatchArchiveProps {
   savedGames: SavedGame[];
   onLoadGame: (game: SavedGame) => void;
+  onReviewGame?: (game: SavedGame) => void;
   onDownloadPgn: (game: SavedGame) => void;
   onDeleteGame: (id: string) => void;
   onClearAll: () => void;
@@ -13,6 +14,7 @@ interface MatchArchiveProps {
 export const MatchArchive: React.FC<MatchArchiveProps> = ({
   savedGames,
   onLoadGame,
+  onReviewGame,
   onDownloadPgn,
   onDeleteGame,
   onClearAll,
@@ -70,6 +72,15 @@ export const MatchArchive: React.FC<MatchArchiveProps> = ({
                   >
                     <Play size={13} /> Load
                   </button>
+                  {onReviewGame && (
+                    <button
+                      className="secondary-btn btn-sm review-btn"
+                      onClick={() => onReviewGame(game)}
+                      title="Analyze with CAPS Review"
+                    >
+                      <Eye size={13} /> Review
+                    </button>
+                  )}
                   <button
                     className="secondary-btn btn-sm"
                     onClick={() => onDownloadPgn(game)}

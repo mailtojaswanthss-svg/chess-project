@@ -1,0 +1,190 @@
+{
+  "total_benchmarks": 10,
+  "schema_pass_rate": 100.0,
+  "motif_recall": 100.0,
+  "hallucination_free_rate": 100.0,
+  "avg_latency_ms": 0.17,
+  "overall_eval_score": 100.0,
+  "results": [
+    {
+      "benchmark_id": "bench_01_legals_mate",
+      "name": "Legal's Mate Trap",
+      "ground_truth_motif": "hanging",
+      "ground_truth_move_san": "d5",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.34,
+      "coach_headline": "Hanging Material Alert: Clean up loose pieces",
+      "coach_concept": "Tactical Hanging Pieces (John Nunn's LPDO)",
+      "coach_recommended_move": "d5 (d7d5)",
+      "tactical_tags": [
+        "hanging-piece",
+        "tactical-anchor",
+        "material-security"
+      ]
+    },
+    {
+      "benchmark_id": "bench_02_back_rank",
+      "name": "Back-Rank Corridor Infiltration",
+      "ground_truth_motif": "back_rank",
+      "ground_truth_move_san": "h3",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.14,
+      "coach_headline": "Back-Rank Corridor Vulnerability: Create luft for your King",
+      "coach_concept": "Back-Rank Mate Corridor",
+      "coach_recommended_move": "h3 (h2h3)",
+      "tactical_tags": [
+        "back-rank",
+        "king-safety",
+        "luft"
+      ]
+    },
+    {
+      "benchmark_id": "bench_03_pin_queen",
+      "name": "Absolute Pin on Queen",
+      "ground_truth_motif": "pin",
+      "ground_truth_move_san": "Qd2",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.18,
+      "coach_headline": "Tactical Pin Restriction: Defensive piece is immobilized",
+      "coach_concept": "Absolute & Relative Pins",
+      "coach_recommended_move": "Qd2 (d1d2)",
+      "tactical_tags": [
+        "pin",
+        "piece-coordination",
+        "tactical-tension"
+      ]
+    },
+    {
+      "benchmark_id": "bench_04_knight_fork",
+      "name": "Knight Fork Threat on c7",
+      "ground_truth_motif": "fork",
+      "ground_truth_move_san": "Ndb5",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.19,
+      "coach_headline": "Double Attack Alert: Knight or Pawn fork geometry",
+      "coach_concept": "Tactical Fork & Double Attack",
+      "coach_recommended_move": "Ndb5 (d4b5)",
+      "tactical_tags": [
+        "fork",
+        "double-attack",
+        "tactical-tension"
+      ]
+    },
+    {
+      "benchmark_id": "bench_05_in_check",
+      "name": "Immediate Check Defense",
+      "ground_truth_motif": "hanging",
+      "ground_truth_move_san": "Nf6",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.18,
+      "coach_headline": "Hanging Material Alert: Clean up loose pieces",
+      "coach_concept": "Tactical Hanging Pieces (John Nunn's LPDO)",
+      "coach_recommended_move": "Nf6 (e4f6)",
+      "tactical_tags": [
+        "hanging-piece",
+        "tactical-anchor",
+        "material-security"
+      ]
+    },
+    {
+      "benchmark_id": "bench_06_opera_pin",
+      "name": "Morphy Opera House Pin",
+      "ground_truth_motif": "pin",
+      "ground_truth_move_san": "Qe6",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.15,
+      "coach_headline": "Tactical Pin Restriction: Defensive piece is immobilized",
+      "coach_concept": "Absolute & Relative Pins",
+      "coach_recommended_move": "Qe6 (e7e6)",
+      "tactical_tags": [
+        "pin",
+        "piece-coordination",
+        "tactical-tension"
+      ]
+    },
+    {
+      "benchmark_id": "bench_07_hanging_rook",
+      "name": "Undefended Rook on Open File",
+      "ground_truth_motif": "hanging",
+      "ground_truth_move_san": "Rfe8",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.14,
+      "coach_headline": "Hanging Material Alert: Clean up loose pieces",
+      "coach_concept": "Tactical Hanging Pieces (John Nunn's LPDO)",
+      "coach_recommended_move": "Rfe8 (f8e8)",
+      "tactical_tags": [
+        "hanging-piece",
+        "tactical-anchor",
+        "material-security"
+      ]
+    },
+    {
+      "benchmark_id": "bench_08_smothered_check",
+      "name": "Smothered Mate Sequence Anchor",
+      "ground_truth_motif": "back_rank",
+      "ground_truth_move_san": "Qb8#",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.09,
+      "coach_headline": "Back-Rank Corridor Vulnerability: Create luft for your King",
+      "coach_concept": "Back-Rank Mate Corridor",
+      "coach_recommended_move": "Qb8# (b2b8)",
+      "tactical_tags": [
+        "back-rank",
+        "king-safety",
+        "luft"
+      ]
+    },
+    {
+      "benchmark_id": "bench_09_checkmate_in_one",
+      "name": "Direct King Threat",
+      "ground_truth_motif": "hanging",
+      "ground_truth_move_san": "d4",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.17,
+      "coach_headline": "Hanging Material Alert: Clean up loose pieces",
+      "coach_concept": "Tactical Hanging Pieces (John Nunn's LPDO)",
+      "coach_recommended_move": "d4 (d2d4)",
+      "tactical_tags": [
+        "hanging-piece",
+        "tactical-anchor",
+        "material-security"
+      ]
+    },
+    {
+      "benchmark_id": "bench_10_endgame_outpost",
+      "name": "Endgame Central Outpost",
+      "ground_truth_motif": "center-control",
+      "ground_truth_move_san": "Ke3",
+      "schema_passed": true,
+      "motif_matched": true,
+      "hallucination_free": true,
+      "latency_ms": 0.11,
+      "coach_headline": "Strategic Development: Position is contested (Benchmark Open)",
+      "coach_concept": "Positional Harmony & Center Outposts",
+      "coach_recommended_move": "Ke3 (f3e3)",
+      "tactical_tags": [
+        "center-control",
+        "positional-harmony",
+        "piece-activity"
+      ]
+    }
+  ]
+}

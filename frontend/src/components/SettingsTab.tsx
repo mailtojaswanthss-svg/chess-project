@@ -13,9 +13,16 @@ import {
   GraduationCap,
   Sparkles,
   Archive,
+  Palette,
+  Sun,
+  Moon,
+  Monitor,
+  BarChart3,
 } from "lucide-react";
 import type { SavedGame, ModelHealth } from "../types/chess";
 import { playSound } from "../utils/audio";
+import { detectOpening } from "../utils/chessUtils";
+import type { BoardTheme, ThemePref } from "../utils/useAppearance";
 
 interface SettingsTabProps {
   soundEnabled: boolean;
@@ -29,6 +36,43 @@ interface SettingsTabProps {
   onDeleteGame: (id: string) => void;
   onClearAllGames: () => void;
   modelHealth: ModelHealth | null;
+  theme: ThemePref;
+  onChangeTheme: (t: ThemePref) => void;
+  boardTheme: BoardTheme;
+  onChangeBoardTheme: (b: BoardTheme) => void;
+}
+
+const BOARD_THEMES: { id: BoardTheme; label: string; light: string; dark: string }[] = [
+  { id: "green", label: "Green", light: "#eeeed2", dark: "#769656" },
+  { id: "walnut", label: "Walnut", light: "#f0d9b5", dark: "#b58863" },
+  { id: "ocean", label: "Ocean", light: "#dee3e6", dark: "#8ca2ad" },
+];
+
+const THEMES: { id: ThemePref; label: string; icon: typeof Sun }[] = [
+  { id: "light", label: "Light", icon: Sun },
+  { id: "dark", label: "Dark", icon: Moon },
+  { id: "system", label: "System", icon: Monitor },
+];
+
+/** Summary of the archive: what's been played and how games ended. */
+function summarise(games: SavedGame[]) {
+  const results = { white: 0, black: 0, draw: 0 };
+  const byMode: Record<string, number> = {};
+  const openings: Record<string, number> = {};
+  let plies = 0;
+  for (const g of games) {
+    const r = g.result.toLowerCase();
+    if (r.includes("white wins")) results.white++;
+    else if (r.includes("black wins")) results.black++;
+    else results.draw++;
+    const mode = g.mode ?? "free_lab";
+    byMode[mode] = (byMode[mode] ?? 0) + 1;
+    const opening = detectOpening(g.moves);
+    if (opening !== "Starting Position" && opening !== "Open Game") openings[opening] = (openings[opening] ?? 0) + 1;
+    plies += g.moves.length;
+  }
+  const favourite = Object.entries(openings).sort((a, b) => b[1] - a[1])[0]?.[0];
+  return { results, byMode, favourite, avgMoves: games.length ? Math.round(plies / games.length / 2) : 0 };
 }
 
 const MODE_LABEL: Record<string, string> = {
@@ -81,8 +125,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onDeleteGame,
   onClearAllGames,
   modelHealth,
+  theme,
+  onChangeTheme,
+  boardTheme,
+  onChangeBoardTheme,
 }) => {
   const isModelActive = modelHealth?.model_loaded ?? false;
+  const record = summarise(savedGames);
+  const total = savedGames.length;
+  const pct = (n: number) => (total ? (n / total) * 100 : 0);
   const auc = modelHealth?.model_metrics?.roc_auc;
 
   return (
@@ -96,7 +147,62 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       <div className="settings-grid">
         <div className="settings-col stagger">
-          <section className="card" style={{ "--i": 0 } as React.CSSProperties} aria-label="Preferences">
+          <section className="card" style={{ "--i": 0 } as React.CSSProperties} aria-label="Appearance">
+            <header className="card__header">
+              <h2 className="card__title">
+                <Palette size={16} /> Appearance
+              </h2>
+            </header>
+            <div className="setting">
+              <div>
+                <div className="setting__name">Theme</div>
+                <div className="setting__desc">System follows your device</div>
+              </div>
+              <div className="segmented" role="group" aria-label="Theme">
+                {THEMES.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    className={`segmented__btn ${theme === id ? "is-active" : ""}`}
+                    aria-pressed={theme === id}
+                    onClick={() => {
+                      playSound("click");
+                      onChangeTheme(id);
+                    }}
+                  >
+                    <Icon size={14} aria-hidden="true" /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="setting setting--stacked">
+              <div>
+                <div className="setting__name">Board colours</div>
+                <div className="setting__desc">Used on every board in the app</div>
+              </div>
+              <div className="board-swatches" role="group" aria-label="Board colours">
+                {BOARD_THEMES.map((b) => (
+                  <button
+                    key={b.id}
+                    className={`board-swatch ${boardTheme === b.id ? "is-active" : ""}`}
+                    aria-pressed={boardTheme === b.id}
+                    onClick={() => {
+                      playSound("click");
+                      onChangeBoardTheme(b.id);
+                    }}
+                  >
+                    <span
+                      className="board-swatch__preview"
+                      style={{ "--sq-l": b.light, "--sq-d": b.dark } as React.CSSProperties}
+                      aria-hidden="true"
+                    />
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="card" style={{ "--i": 1 } as React.CSSProperties} aria-label="Preferences">
             <header className="card__header">
               <h2 className="card__title">
                 <SlidersHorizontal size={16} /> Preferences
@@ -140,35 +246,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
           </section>
 
-          <section className="card" style={{ "--i": 1 } as React.CSSProperties} aria-label="Engine">
-            <header className="card__header">
-              <h2 className="card__title">
-                <Cpu size={16} /> Engine
-              </h2>
-              <span className={`pill ${isModelActive ? "pill--good" : "pill--warn"}`}>
-                <span className="live-dot" /> {isModelActive ? "Online" : "Offline"}
-              </span>
-            </header>
-            <dl className="engine-stats">
-              <div>
-                <dt>Training samples</dt>
-                <dd className="num">{modelHealth?.model_train_samples?.toLocaleString() ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>ROC-AUC</dt>
-                <dd className="num">{typeof auc === "number" ? auc.toFixed(3) : "—"}</dd>
-              </div>
-            </dl>
-            <ul className="stack-list">
-              {STACK.map((item) => (
-                <li key={item.name} className={`stack-item stack-item--${item.tone}`}>
-                  <strong>{item.name}</strong>
-                  <span>{item.text}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
           <section className="card credits" style={{ "--i": 2 } as React.CSSProperties} aria-label="Credits">
             <header className="card__header">
               <h2 className="card__title">
@@ -191,6 +268,57 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
           </section>
         </div>
+
+        <div className="settings-col settings-col--wide">
+        <section className="card record" aria-label="Your record">
+          <header className="card__header">
+            <h2 className="card__title">
+              <BarChart3 size={16} /> Your record
+            </h2>
+            <span className="card__meta">From your saved games</span>
+          </header>
+          {total === 0 ? (
+            <p className="card__body">Finish a game against any bot and your results, favourite opening and game length show up here.</p>
+          ) : (
+            <>
+              <div className="record-stats">
+                <div className="record-stat">
+                  <span className="record-stat__value num">{total}</span>
+                  <span className="record-stat__label">Games finished</span>
+                </div>
+                <div className="record-stat">
+                  <span className="record-stat__value num">{record.avgMoves}</span>
+                  <span className="record-stat__label">Average length, moves</span>
+                </div>
+                <div className="record-stat record-stat--wide">
+                  <span className="record-stat__value">{record.favourite ?? "Not enough data"}</span>
+                  <span className="record-stat__label">Most played opening</span>
+                </div>
+              </div>
+              <div className="record-results">
+                <div className="record-bar" role="img" aria-label={`White won ${record.results.white}, drawn ${record.results.draw}, Black won ${record.results.black}`}>
+                  <span className="record-bar__seg record-bar__seg--white" style={{ width: `${pct(record.results.white)}%` }} />
+                  <span className="record-bar__seg record-bar__seg--draw" style={{ width: `${pct(record.results.draw)}%` }} />
+                  <span className="record-bar__seg record-bar__seg--black" style={{ width: `${pct(record.results.black)}%` }} />
+                </div>
+                <div className="record-legend">
+                  <span>White won <span className="num">{record.results.white}</span></span>
+                  <span>Drawn <span className="num">{record.results.draw}</span></span>
+                  <span>Black won <span className="num">{record.results.black}</span></span>
+                </div>
+              </div>
+              <ul className="record-modes">
+                {Object.entries(record.byMode).map(([mode, n]) => (
+                  <li key={mode}>
+                    <span>{MODE_LABEL[mode] ?? mode}</span>
+                    <span className="meter"><span className="meter__fill" style={{ width: `${pct(n)}%`, display: "block" }} /></span>
+                    <span className="num">{n}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
 
         <section className="card archive" aria-label="Match archive">
           <header className="card__header">
@@ -294,6 +422,36 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
           )}
         </section>
+          <section className="card" aria-label="Engine">
+            <header className="card__header">
+              <h2 className="card__title">
+                <Cpu size={16} /> Engine
+              </h2>
+              <span className={`pill ${isModelActive ? "pill--good" : "pill--warn"}`}>
+                <span className="live-dot" /> {isModelActive ? "Online" : "Offline"}
+              </span>
+            </header>
+            <dl className="engine-stats">
+              <div>
+                <dt>Training samples</dt>
+                <dd className="num">{modelHealth?.model_train_samples?.toLocaleString() ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>ROC-AUC</dt>
+                <dd className="num">{typeof auc === "number" ? auc.toFixed(3) : "—"}</dd>
+              </div>
+            </dl>
+            <ul className="stack-list">
+              {STACK.map((item) => (
+                <li key={item.name} className={`stack-item stack-item--${item.tone}`}>
+                  <strong>{item.name}</strong>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+        </div>
       </div>
     </div>
   );

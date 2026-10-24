@@ -40,6 +40,7 @@ import { ThreatRadarCard } from "./components/arena/ThreatRadarCard";
 import { ReviewWorkspace } from "./components/review/ReviewWorkspace";
 import { PuzzleCard, type PuzzleStatus } from "./components/arena/PuzzleCard";
 import { useTrapPuzzles, puzzleStartPosition, puzzleSolveLength, puzzleSolverColor } from "./utils/useTrapPuzzles";
+import { useAppearance } from "./utils/useAppearance";
 import {
   gameOutcome,
   getKingSquare,
@@ -58,6 +59,7 @@ const STARTING_FEN = new Chess().fen();
 const NO_THREATS: ThreatItem[] = [];
 
 export default function App() {
+  const appearance = useAppearance();
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [fenHistory, setFenHistory] = useState<string[]>([STARTING_FEN]);
   const [rating, setRating] = useState<number>(1200);
@@ -1047,7 +1049,7 @@ export default function App() {
     if (hoveredCandidateMove && hoveredCandidateMove.length >= 4) {
       const from = hoveredCandidateMove.slice(0, 2) as Square;
       const to = hoveredCandidateMove.slice(2, 4) as Square;
-      return [[from, to, "rgb(56, 189, 248)"]];
+      return [[from, to, "rgb(255, 150, 40)"]];
     }
     return overlays.arrows ? hintArrow : [];
   }, [hoveredCandidateMove, hintArrow, overlays.arrows]);
@@ -1243,6 +1245,8 @@ export default function App() {
         isFlipped={isFlipped}
         onFlipBoard={handleFlipBoard}
         onOpenSettings={() => setShowSettings(true)}
+        isDark={appearance.isDark}
+        onToggleTheme={() => appearance.setTheme(appearance.isDark ? "light" : "dark")}
       />
 
       {toastMessage && (
@@ -1277,30 +1281,29 @@ export default function App() {
         <div key={viewKey} className="view-enter">
           {activeTab === "arena" && !isReviewingGame && (
             <div className="view arena-page">
-              <PlayToolbar
-                playMode={playMode}
-                rating={rating}
-                ratingLocked={ratingLocked}
-                onSelectMode={handleSelectMode}
-                onSetRating={handleSetRating}
-              />
               <ArenaView
                 boardSize={boardSize}
-                hud={
-                  <BoardHud
-                    sideToMove={sideToMove}
-                    fen={game.fen()}
-                    moveCount={history.length}
-                    riskScore={playMode === "trap_puzzle" ? null : riskScore}
-                    isCheck={isCheck}
-                    isAnalyzing={isAnalyzing}
-                  >
-                    <OverlayControls overlays={overlays} onToggle={handleToggleOverlay} />
-                  </BoardHud>
-                }
-                overlays={null}
-                overlayDetail={
-                  showTerritoryHeatmap && territoryControl ? <InfluencePanel territory={territoryControl} /> : null
+                panelHead={
+                  <>
+                    <PlayToolbar
+                      playMode={playMode}
+                      rating={rating}
+                      ratingLocked={ratingLocked}
+                      onSelectMode={handleSelectMode}
+                      onSetRating={handleSetRating}
+                    />
+                    <BoardHud
+                      sideToMove={sideToMove}
+                      fen={game.fen()}
+                      moveCount={history.length}
+                      riskScore={playMode === "trap_puzzle" ? null : riskScore}
+                      isCheck={isCheck}
+                      isAnalyzing={isAnalyzing}
+                    >
+                      <OverlayControls overlays={overlays} onToggle={handleToggleOverlay} />
+                    </BoardHud>
+                    {showTerritoryHeatmap && territoryControl && <InfluencePanel territory={territoryControl} />}
+                  </>
                 }
                 topStrip={
                   <PlayerStrip
@@ -1478,6 +1481,10 @@ export default function App() {
               }}
               onClearAllGames={() => setConfirmClear(true)}
               modelHealth={modelHealth}
+              theme={appearance.theme}
+              onChangeTheme={appearance.setTheme}
+              boardTheme={appearance.board}
+              onChangeBoardTheme={appearance.setBoard}
             />
           )}
         </div>

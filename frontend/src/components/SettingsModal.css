@@ -31,7 +31,7 @@
 
 .modal-header h3 {
   font-size: 16px;
-  color: #fff;
+  color: var(--text-1);
 }
 
 .settings-section {
@@ -51,7 +51,7 @@
 
 .setting-row strong {
   font-size: 13px;
-  color: #fff;
+  color: var(--text-1);
   display: block;
   margin-bottom: 2px;
 }
@@ -72,13 +72,13 @@
 }
 
 .toggle-btn.on {
-  background: rgba(182, 228, 123, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   border: 1px solid var(--accent-lime);
   color: var(--accent-lime);
 }
 
 .toggle-btn.off {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--fg-rgb) / 0.05);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
 }

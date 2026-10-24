@@ -5,7 +5,7 @@
 }
 
 .outlook--final {
-  border-color: rgba(231, 198, 107, 0.35);
+  border-color: color-mix(in srgb, var(--gold) 35%, transparent);
   animation: pop-in 520ms var(--ease-out) backwards;
 }
 
@@ -28,7 +28,8 @@
   height: 10px;
   border-radius: var(--radius-pill);
   overflow: hidden;
-  background: #1f2b20;
+  background: #2a302d;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .wdl__seg {
@@ -37,7 +38,7 @@
   transition: flex-grow var(--dur-slow) var(--ease-out);
 }
 
-.wdl__seg--white { background: var(--piece-white); }
+.wdl__seg--white { background: #f6f7f6; box-shadow: inset 0 0 0 1px var(--border-strong); }
 .wdl__seg--draw { background: #7b8670; }
 .wdl__seg--black { background: #080c08; box-shadow: inset 0 0 0 1px var(--border-strong); }
 
@@ -71,12 +72,12 @@
 .outlook-status--good .live-dot { color: var(--good); }
 .outlook-status--accent .live-dot { color: var(--accent); }
 .outlook-status--warn .live-dot { color: var(--warn); }
-.outlook-status--danger { background: var(--danger-soft); color: #fecaca; }
+.outlook-status--danger { background: var(--danger-soft); color: var(--danger-text); }
 .outlook-status--danger .live-dot { color: var(--danger); }
 
 /* Coach */
 .coach.has-advice {
-  border-color: rgba(180, 156, 230, 0.35);
+  border-color: color-mix(in srgb, var(--violet) 35%, transparent);
 }
 
 .coach-ask {
@@ -107,7 +108,7 @@
 }
 
 .coach-headline {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-1);
@@ -119,7 +120,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   background: var(--warn-soft);
-  color: #fde68a;
+  color: var(--warn-text);
   font-size: var(--text-small);
 }
 
@@ -195,7 +196,7 @@
 
 .threat:hover,
 .threat:focus-visible {
-  border-color: rgba(229, 103, 90, 0.45);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
   background: var(--danger-soft);
   outline: none;
 }
@@ -245,7 +246,7 @@
 
 /* Trap puzzle */
 .puzzle--solved {
-  border-color: rgba(129, 182, 76, 0.6);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   animation: pop-in 520ms var(--ease-out) backwards;
 }
 
@@ -273,7 +274,7 @@
 }
 
 .puzzle-brief__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.15rem;
 }
 
@@ -285,7 +286,7 @@
   padding: 1px 6px;
   border-radius: 6px;
   background: var(--danger-soft);
-  color: #fecaca;
+  color: var(--danger-text);
 }
 
 .puzzle-progress {
@@ -297,7 +298,7 @@
   flex: 1;
   height: 6px;
   border-radius: var(--radius-pill);
-  background: rgba(238, 238, 210, 0.14);
+  background: rgb(var(--fg-rgb) / 0.14);
   transition: background var(--dur-med) var(--ease-out);
 }
 
@@ -306,7 +307,7 @@
 }
 
 .puzzle-dot.is-next {
-  background: rgba(238, 238, 210, 0.45);
+  background: rgb(var(--fg-rgb) / 0.45);
   animation: pulse-dot 1.4s ease-in-out infinite;
 }
 
@@ -330,7 +331,7 @@
 
 .puzzle-status--wrong {
   background: var(--danger-soft);
-  color: #fecaca;
+  color: var(--danger-text);
 }
 
 .puzzle-explain {

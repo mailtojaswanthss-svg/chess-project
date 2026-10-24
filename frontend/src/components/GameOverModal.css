@@ -1,11 +1,11 @@
 /* Migrated from the former monolithic styles.css; colours use design tokens. */
 .game-over-banner {
-  background: linear-gradient(135deg, rgba(24, 44, 34, 0.95), rgba(14, 24, 34, 0.95));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--surface-1)), var(--surface-1));
   border: 1px solid var(--border-accent);
   border-radius: var(--radius-md);
   padding: 14px 18px;
   margin-bottom: 14px;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(182, 228, 123, 0.12);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent);
   animation: slide-in 0.3s ease;
 }
 
@@ -42,13 +42,13 @@
 }
 
 .dismiss-btn:hover {
-  color: #fff;
+  color: var(--text-1);
 }
 
 .outcome-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 24px;
-  color: #fff;
+  color: var(--text-1);
   margin-bottom: 2px;
 }
 
@@ -59,7 +59,7 @@
 }
 
 .outcome-reason strong {
-  color: #fff;
+  color: var(--text-1);
 }
 
 .coach-takeaway-box {
@@ -83,7 +83,7 @@
 .takeaway-text {
   font-size: 13px;
   line-height: 1.5;
-  color: #e9e8d6;
+  color: var(--text-1);
 }
 
 .game-over-actions {
@@ -93,6 +93,6 @@
 }
 
 .action-takeback {
-  border-color: rgba(182, 228, 123, 0.4);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   color: var(--accent-lime);
 }

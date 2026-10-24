@@ -31,10 +31,11 @@
 }
 
 .page-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-page);
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
 }
 
 .page-sub {
@@ -51,14 +52,10 @@
   align-items: start;
 }
 
-/* The board column scales with the window height so the whole board fits on screen
-   (392px is the header, toolbar, status bar, player strips and controls around it) */
-.workspace,
-.arena-page { --board-max: clamp(360px, calc(100svh - 392px), 620px); }
-.workspace:has(.board-size-compact),
-.arena-page:has(.board-size-compact) { --board-max: clamp(340px, calc(100svh - 392px), 520px); }
-.workspace:has(.board-size-large),
-.arena-page:has(.board-size-large) { --board-max: clamp(360px, calc(100svh - 392px), 760px); }
+/* Review board width */
+.workspace { --board-max: 620px; }
+.workspace:has(.board-size-compact) { --board-max: 520px; }
+.workspace:has(.board-size-large) { --board-max: 760px; }
 
 .workspace__board {
   display: grid;
@@ -248,13 +245,13 @@
 }
 
 .btn--primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background: var(--accent-strong);
   border-color: transparent;
-  color: #12200d;
+  color: var(--on-accent);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #c3e08d, var(--accent));
+  background: color-mix(in srgb, var(--accent-strong) 85%, black);
   border-color: transparent;
 }
 
@@ -275,7 +272,7 @@
 }
 
 .btn--danger:hover:not(:disabled) {
-  background: rgba(229, 103, 90, 0.24);
+  background: color-mix(in srgb, var(--danger) 24%, transparent);
   border-color: transparent;
 }
 
@@ -305,7 +302,7 @@
   gap: 4px;
   padding: 4px;
   border-radius: 12px;
-  background: rgba(16, 24, 17, 0.7);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   max-width: 100%;
   overflow-x: auto;
@@ -340,7 +337,7 @@
 .segmented__btn.is-active {
   color: var(--text-1);
   background: var(--surface-3);
-  box-shadow: 0 0 0 1px var(--accent-ring), 0 6px 18px -8px rgba(155, 196, 90, 0.6);
+  box-shadow: 0 0 0 1px var(--accent-ring), 0 6px 18px -8px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 /* Native-tooltip-free hint, used on overlay toggles */
@@ -384,7 +381,7 @@
   position: relative;
   height: 6px;
   border-radius: var(--radius-pill);
-  background: rgba(176, 184, 152, 0.16);
+  background: rgb(var(--fg-rgb) / 0.16);
   overflow: hidden;
 }
 
@@ -414,8 +411,6 @@
   text-align: left;
   font-size: var(--text-label);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-3);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -433,7 +428,7 @@
 }
 
 .data-table tbody tr:hover {
-  background: rgba(155, 196, 90, 0.05);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .data-table tbody tr:last-child td {
@@ -444,32 +439,113 @@
   text-align: right;
 }
 
-/* Keep the arena toolbar aligned with the board + sidebar pair */
+/* ==========================================================================
+   Play layout: a big board with thin player bars, and one game panel beside it.
+   Standard fits the board to the window height (178px is the header, the two
+   player bars, gaps and page padding); Large fills the width instead.
+   ========================================================================== */
 .arena-page {
   width: 100%;
-  max-width: calc(var(--board-max) + 400px + 32px);
-  margin-inline: auto;
 }
 
-/* Desktop arena: the sidebar scrolls on its own so the page ends with the board */
-@media (min-width: 900px) {
-  .arena .workspace__side {
-    max-height: calc(100svh - 200px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 4px;
-    margin-right: -4px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--surface-3) transparent;
-  }
+.arena {
+  --board-max: clamp(360px, calc(100svh - 178px), 900px);
+  grid-template-columns: minmax(0, var(--board-max)) minmax(340px, 440px);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.arena.board-size-compact { --board-max: clamp(340px, calc(100svh - 260px), 600px); }
+.arena.board-size-large {
+  --board-max: 1100px;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+}
+
+.board-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.game-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  /* The panel takes the board column's height; its body scrolls inside it */
+  contain: size;
+}
+
+.game-panel__head {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+.game-panel__foot {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+/* Inside the panel, sections are separated by rules instead of being separate cards */
+.game-panel .card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 14px 16px;
+}
+
+.game-panel .panel-slot + .panel-slot .card {
+  border-top: 1px solid var(--border);
 }
 
 @media (max-width: 1279px) {
-  .arena-page { max-width: calc(var(--board-max) + 340px + 24px); }
+  .arena {
+    grid-template-columns: minmax(0, var(--board-max)) minmax(320px, 360px);
+    gap: 16px;
+  }
 }
 
 @media (max-width: 899px) {
-  .arena-page { max-width: none; }
+  .arena,
+  .arena.board-size-large {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .game-panel {
+    contain: none;
+    /* clip (not hidden) so the sticky footer sticks to the viewport */
+    overflow: clip;
+  }
+  .game-panel__body {
+    overflow: visible;
+  }
+  /* Phones: keep the move controls in reach while scrolling the panel */
+  .game-panel__foot {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    box-shadow: 0 -8px 20px -12px rgb(var(--fg-rgb) / 0.35);
+  }
 }
 
 /* Hover tooltips mean nothing on touch screens and would widen scroll containers */

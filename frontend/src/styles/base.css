@@ -19,11 +19,9 @@ body {
   line-height: var(--leading-body);
   color: var(--text-1);
   background:
-    radial-gradient(ellipse 70% 45% at 50% -10%, rgba(155, 196, 90, 0.14), transparent 70%),
-    radial-gradient(ellipse 45% 40% at 100% 20%, rgba(238, 238, 210, 0.05), transparent 70%),
-    /* faint checkerboard, a nod to the board itself */
-    repeating-conic-gradient(rgba(238, 238, 210, 0.022) 0 25%, transparent 0 50%) 0 0 / 64px 64px,
+    radial-gradient(ellipse 70% 40% at 50% -12%, var(--accent-soft), transparent 70%),
     var(--surface-0);
+  transition: background-color var(--dur-med) var(--ease-out), color var(--dur-med) var(--ease-out);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -56,9 +54,10 @@ h1,
 h2,
 h3,
 h4 {
-  line-height: 1.25;
+  font-family: var(--font-display);
+  line-height: 1.2;
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 /* Numbers that should line up column to column */

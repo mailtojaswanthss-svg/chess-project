@@ -36,8 +36,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, rgba(16, 24, 17, 0.85) 0%, rgba(31, 43, 32, 0.6) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-2) 100%);
+  border: 1px solid rgb(var(--fg-rgb) / 0.08);
   border-radius: 16px;
   padding: 22px 28px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -46,7 +46,7 @@
 .drill-title-wrap h2 {
   font-size: 24px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-1);
   margin-bottom: 6px;
 }
 
@@ -61,12 +61,12 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  background: rgba(229, 103, 90, 0.12);
-  border: 1px solid rgba(229, 103, 90, 0.3);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 700;
-  color: #ec8a7f;
+  color: var(--danger-text);
   margin-bottom: 10px;
 }
 
@@ -79,14 +79,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(var(--fg-rgb) / 0.04);
+  border: 1px solid rgb(var(--fg-rgb) / 0.08);
   border-radius: 12px;
   padding: 10px 16px;
 }
 
 .drill-stat-box.on-fire {
-  background: rgba(229, 103, 90, 0.15);
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
   border-color: var(--danger);
   animation: fire-glow 2s infinite ease-in-out;
 }
@@ -105,7 +105,7 @@
 .stat-number {
   font-size: 18px;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-1);
 }
 
 .stat-name {
@@ -126,7 +126,7 @@
 
 .drill-board-frame {
   background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(var(--fg-rgb) / 0.08);
   border-radius: 16px;
   padding: 16px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
@@ -142,11 +142,11 @@
 }
 
 .side-indicator {
-  color: #fff;
+  color: var(--text-1);
 }
 
 .difficulty-tag {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 11px;
@@ -165,8 +165,8 @@
   gap: 8px;
   margin-top: 10px;
   padding: 8px 12px;
-  background: rgba(155, 196, 90, 0.12);
-  border: 1px solid rgba(155, 196, 90, 0.35);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: 8px;
   font-size: 12px;
   color: var(--accent);
@@ -186,8 +186,8 @@
   justify-content: center;
   gap: 6px;
   padding: 8px 12px;
-  background: rgba(155, 196, 90, 0.15);
-  border: 1px solid rgba(155, 196, 90, 0.3);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   color: var(--accent);
   border-radius: 8px;
   font-size: 12px;
@@ -197,13 +197,13 @@
 }
 
 .playback-btn:hover {
-  background: rgba(155, 196, 90, 0.25);
-  border-color: #9bc45a;
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: var(--accent);
 }
 
 .playback-btn.reset {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--fg-rgb) / 0.05);
+  border-color: rgb(var(--fg-rgb) / 0.1);
   color: var(--text-secondary);
 }
 
@@ -215,7 +215,7 @@
 
 .trap-question-card {
   background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(var(--fg-rgb) / 0.08);
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
@@ -233,13 +233,13 @@
 .trap-opening-title h3 {
   font-size: 22px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-1);
   margin-bottom: 16px;
 }
 
 .tempted-move-box {
-  background: rgba(229, 103, 90, 0.08);
-  border: 1px solid rgba(229, 103, 90, 0.25);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 22px;
@@ -249,7 +249,7 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: #ec8a7f;
+  color: var(--danger-text);
   display: block;
   margin-bottom: 6px;
 }
@@ -264,7 +264,7 @@
 .tempt-san {
   font-size: 26px;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-1);
   letter-spacing: -0.02em;
 }
 
@@ -276,7 +276,7 @@
 
 .tempt-prompt {
   font-size: 13px;
-  color: #e9e8d6;
+  color: var(--text-1);
   line-height: 1.45;
 }
 
@@ -319,29 +319,29 @@
 }
 
 .decision-btn.trap-btn {
-  background: rgba(229, 103, 90, 0.14);
-  border: 2px solid rgba(229, 103, 90, 0.4);
-  color: #ec8a7f;
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border: 2px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger-text);
 }
 
 .decision-btn.trap-btn:hover {
-  background: rgba(229, 103, 90, 0.25);
+  background: color-mix(in srgb, var(--danger) 25%, transparent);
   border-color: var(--danger);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(229, 103, 90, 0.3);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
 .decision-btn.safe-btn {
-  background: rgba(95, 208, 138, 0.14);
-  border: 2px solid rgba(95, 208, 138, 0.4);
-  color: #8fe0ad;
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  border: 2px solid color-mix(in srgb, var(--good) 40%, transparent);
+  color: var(--good-text);
 }
 
 .decision-btn.safe-btn:hover {
-  background: rgba(95, 208, 138, 0.25);
+  background: color-mix(in srgb, var(--good) 25%, transparent);
   border-color: var(--good);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(95, 208, 138, 0.3);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--good) 30%, transparent);
 }
 
 .drill-result-card {
@@ -351,13 +351,13 @@
 }
 
 .drill-result-card.correct {
-  background: rgba(95, 208, 138, 0.1);
-  border: 1px solid rgba(95, 208, 138, 0.3);
+  background: color-mix(in srgb, var(--good) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--good) 30%, transparent);
 }
 
 .drill-result-card.wrong {
-  background: rgba(229, 103, 90, 0.1);
-  border: 1px solid rgba(229, 103, 90, 0.3);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
 .result-icon-tag {
@@ -368,11 +368,11 @@
 }
 
 .result-icon-tag.correct {
-  color: #5fd08a;
+  color: var(--good);
 }
 
 .result-icon-tag.wrong {
-  color: #ec8a7f;
+  color: var(--danger-text);
 }
 
 .result-icon-tag strong {
@@ -405,7 +405,7 @@
 
 .explanation-text {
   font-size: 13px;
-  color: #e9e8d6;
+  color: var(--text-1);
   line-height: 1.45;
   margin-bottom: 12px;
 }
@@ -429,29 +429,29 @@
 }
 
 .move-chip {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgb(var(--fg-rgb) / 0.08);
+  border: 1px solid rgb(var(--fg-rgb) / 0.12);
   padding: 4px 8px;
   border-radius: 6px;
   font-family: monospace;
   font-size: 12px;
-  color: #fff;
+  color: var(--text-1);
   transition: all 0.2s ease;
 }
 
 .move-chip.candidate {
-  background: rgba(229, 103, 90, 0.16);
-  border-color: rgba(229, 103, 90, 0.4);
-  color: #fca5a5;
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger-text);
   font-weight: 700;
 }
 
 .move-chip.active-step {
-  background: rgba(155, 196, 90, 0.35);
-  border-color: #9bc45a;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-color: var(--accent);
   color: var(--accent);
   font-weight: 700;
-  box-shadow: 0 0 10px rgba(155, 196, 90, 0.6);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
   transform: scale(1.05);
 }
 
@@ -462,10 +462,10 @@
   gap: 8px;
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #9bc45a, #6d9640);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   border: none;
   border-radius: 10px;
-  color: #fff;
+  color: var(--text-1);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -473,9 +473,9 @@
 }
 
 .next-trap-btn:hover {
-  background: linear-gradient(135deg, #6d9640, #557a2f);
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent-strong));
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(155, 196, 90, 0.4);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .difficulty-filter-bar {
@@ -484,15 +484,15 @@
   gap: 8px;
   padding: 12px 16px;
   background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(var(--fg-rgb) / 0.08);
   border-radius: 12px;
   font-size: 12px;
   color: var(--text-muted);
 }
 
 .filter-pill {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(var(--fg-rgb) / 0.04);
+  border: 1px solid rgb(var(--fg-rgb) / 0.08);
   color: var(--text-secondary);
   padding: 4px 10px;
   border-radius: 6px;
@@ -503,8 +503,8 @@
 
 .filter-pill:hover,
 .filter-pill.active {
-  background: rgba(155, 196, 90, 0.2);
-  border-color: #9bc45a;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent);
   color: var(--accent);
 }
 
@@ -531,19 +531,19 @@
 }
 
 .playback-btn.step-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgb(var(--fg-rgb) / 0.06);
+  border: 1px solid rgb(var(--fg-rgb) / 0.12);
   color: var(--text-1);
 }
 
 .playback-btn.step-btn:hover:not(:disabled) {
-  background: rgba(155, 196, 90, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   border-color: var(--accent-cyan);
 }
 
 .playback-btn.play-main-btn {
-  background: linear-gradient(135deg, rgba(155, 196, 90, 0.25), rgba(95, 208, 138, 0.25));
-  border: 1px solid rgba(155, 196, 90, 0.4);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 25%, transparent), color-mix(in srgb, var(--good) 25%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   color: var(--text-1);
   font-weight: 600;
 }
@@ -553,18 +553,16 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(155, 196, 90, 0.08);
-  border: 1px solid rgba(155, 196, 90, 0.2);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   border-radius: var(--radius-sm);
   font-size: 12px;
-  color: #e9e8d6;
+  color: var(--text-1);
 }
 
 .filter-bar-label {
   font-size: 11px;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   font-weight: 600;
   margin-right: 6px;
 }
@@ -577,7 +575,11 @@
 
 /* Responsive layout (added with the design-system migration) */
 .drill-stage-grid {
-  grid-template-columns: minmax(0, 500px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, clamp(400px, calc(100svh - 340px), 700px)) minmax(0, 1fr);
+}
+
+.trap-drill-container {
+  max-width: 1440px;
 }
 
 .drill-header {

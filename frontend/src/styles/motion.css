@@ -20,7 +20,7 @@
 }
 
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 var(--pulse-color, rgba(155, 196, 90, 0.55)); }
+  0% { box-shadow: 0 0 0 0 var(--pulse-color, color-mix(in srgb, var(--accent) 55%, transparent)); }
   70% { box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); }
   100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
 }
@@ -36,13 +36,13 @@
 }
 
 @keyframes glow-turn {
-  0%, 100% { box-shadow: 0 0 0 1px var(--accent-ring), 0 0 24px -6px rgba(155, 196, 90, 0.35); }
-  50% { box-shadow: 0 0 0 1px var(--accent-ring), 0 0 36px -4px rgba(155, 196, 90, 0.55); }
+  0%, 100% { box-shadow: 0 0 0 1px var(--accent-ring), 0 0 24px -6px color-mix(in srgb, var(--accent) 35%, transparent); }
+  50% { box-shadow: 0 0 0 1px var(--accent-ring), 0 0 36px -4px color-mix(in srgb, var(--accent) 55%, transparent); }
 }
 
 @keyframes check-flash {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(229, 103, 90, 0.7), 0 0 24px -4px rgba(229, 103, 90, 0.5); }
-  50% { box-shadow: 0 0 0 2px rgba(229, 103, 90, 0.95), 0 0 40px 0 rgba(229, 103, 90, 0.6); }
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 70%, transparent), 0 0 24px -4px color-mix(in srgb, var(--danger) 50%, transparent); }
+  50% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 95%, transparent), 0 0 40px 0 color-mix(in srgb, var(--danger) 60%, transparent); }
 }
 
 @keyframes sheen {
@@ -89,9 +89,9 @@
   border-radius: 8px;
   background: linear-gradient(
     90deg,
-    rgba(176, 184, 152, 0.08) 0%,
-    rgba(176, 184, 152, 0.2) 50%,
-    rgba(176, 184, 152, 0.08) 100%
+    rgb(var(--fg-rgb) / 0.08) 0%,
+    rgb(var(--fg-rgb) / 0.2) 50%,
+    rgb(var(--fg-rgb) / 0.08) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;

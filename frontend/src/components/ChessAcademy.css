@@ -137,7 +137,7 @@
 }
 
 .mini-sq.is-black {
-  color: #141c15;
+  color: var(--surface-1);
 }
 
 .lesson__head {

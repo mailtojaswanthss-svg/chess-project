@@ -323,7 +323,7 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
         <div className="drill-title-wrap">
           <div className="drill-badge">
             <Target size={15} className="text-danger" />
-            <span>TACTICAL DANGER DRILL</span>
+            <span>Trap or safe?</span>
           </div>
           <h2>Spot the Trap: Poisoned Blunder or Safe Strike?</h2>
           <p>
@@ -386,8 +386,8 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
                 customArrows={customArrows}
                 customSquareStyles={customSquareStyles}
                 boardWidth={boardWidth}
-                customDarkSquareStyle={{ backgroundColor: "#769656" }}
-                customLightSquareStyle={{ backgroundColor: "#eeeed2" }}
+                customDarkSquareStyle={{ backgroundColor: "var(--board-dark)" }}
+                customLightSquareStyle={{ backgroundColor: "var(--board-light)" }}
               />
             </div>
 
@@ -474,13 +474,13 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
         <div className="drill-control-col">
           <div className="trap-question-card">
             <div className="trap-opening-title">
-              <span className="trap-id-label">SCENARIO #{currentIndex + 1}</span>
+              <span className="trap-id-label">Position {currentIndex + 1}</span>
               <h3>{activeTrap?.title}</h3>
             </div>
 
             {/* Candidate Move Highlight */}
             <div className="tempted-move-box">
-              <span className="tempt-label">CANDIDATE MOVE UNDER INSPECTION:</span>
+              <span className="tempt-label">The move in question</span>
               <div className="tempt-san-row">
                 <span className="tempt-san">{activeTrap?.tempted_move_san}</span>
                 <span className="tempt-uci">({activeTrap?.tempted_move_uci})</span>
@@ -497,7 +497,7 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
                 >
                   <div className="btn-icon">⚠️</div>
                   <div className="btn-texts">
-                    <strong>POISONED TRAP!</strong>
+                    <strong>It’s a trap</strong>
                     <span>Playing this move is a fatal blunder</span>
                   </div>
                 </button>
@@ -508,7 +508,7 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
                 >
                   <div className="btn-icon">🛡️</div>
                   <div className="btn-texts">
-                    <strong>SOUND & SAFE!</strong>
+                    <strong>Safe to play</strong>
                     <span>Tactically justified, safe to play</span>
                   </div>
                 </button>
@@ -579,7 +579,7 @@ export const TrapDrillMode: React.FC<TrapDrillModeProps> = ({
 
           {/* Hardness Category Filter Pills */}
           <div className="difficulty-filter-bar">
-            <span className="filter-bar-label">Hardness Category:</span>
+            <span className="filter-bar-label">Difficulty</span>
             <div className="filter-pills-row">
               <button
                 className={`filter-pill ${filterDifficulty === "all" ? "active" : ""}`}

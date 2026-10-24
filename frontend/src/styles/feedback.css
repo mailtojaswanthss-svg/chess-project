@@ -12,7 +12,7 @@
   border-radius: var(--radius-pill);
   background: var(--surface-solid);
   border: 1px solid var(--accent-ring);
-  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8), 0 0 24px -8px rgba(155, 196, 90, 0.6);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8), 0 0 24px -8px color-mix(in srgb, var(--accent) 60%, transparent);
   font-size: var(--text-small);
   font-weight: 600;
   transform: translateX(-50%);
@@ -37,8 +37,8 @@
   padding: 10px 12px 10px 16px;
   border-radius: var(--radius-lg);
   background: var(--danger-soft);
-  border: 1px solid rgba(229, 103, 90, 0.4);
-  color: #fecaca;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger-text);
   font-size: var(--text-small);
   animation: slide-down var(--dur-med) var(--ease-out) backwards;
 }

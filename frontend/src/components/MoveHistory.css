@@ -22,7 +22,7 @@
 }
 
 .history-row:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.025);
+  background: rgb(var(--fg-rgb) / 0.025);
 }
 
 .history-no {
@@ -39,7 +39,7 @@
 }
 
 .history-move.is-current {
-  color: #12200d;
+  color: var(--on-accent);
   background: var(--accent);
   font-weight: 500;
   animation: pop-in var(--dur-med) var(--ease-out) backwards;

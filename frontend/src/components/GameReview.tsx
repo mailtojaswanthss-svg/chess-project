@@ -259,7 +259,7 @@ export const GameReview: React.FC<GameReviewProps> = ({
             </div>
             <div className="svg-chart-wrap">
               <svg viewBox={`0 0 ${Math.max(300, moves.length * 14)} 100`} className="eval-svg">
-                <line x1="0" y1="50" x2={Math.max(300, moves.length * 14)} y2="50" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
+                <line x1="0" y1="50" x2={Math.max(300, moves.length * 14)} y2="50" style={{ stroke: "rgb(var(--fg-rgb) / 0.15)" }} strokeDasharray="3 3" />
                 {moves.map((m, idx) => {
                   const x = idx * 14 + 7;
                   const loss = Math.min(50, m.evaluation_loss_centipawns / 10);
@@ -297,10 +297,10 @@ export const GameReview: React.FC<GameReviewProps> = ({
                         } ${isSelected ? "selected-bar" : ""}`}
                       />
                       {isBlunder && (
-                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3" fill="#e5675a" />
+                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3" style={{ fill: "var(--danger)" }} />
                       )}
                       {isBrilliant && (
-                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3.5" fill="#9bc45a" />
+                        <circle cx={x} cy={m.player === "White" ? barY - 4 : barY + barHeight + 4} r="3.5" style={{ fill: "var(--accent)" }} />
                       )}
                     </g>
                   );

@@ -5,12 +5,12 @@ import type { PlayMode } from "../../types/chess";
 
 export const MAIA_RATINGS = [1100, 1300, 1500, 1700, 1900];
 
-export const MODES: { id: PlayMode; label: string; tip: string; icon: typeof Cpu }[] = [
-  { id: "free_lab", label: "Analysis", tip: "Move both sides freely with live engine analysis", icon: FlaskConical },
-  { id: "max_engine", label: "vs Stockfish", tip: "Play Stockfish at the strength you choose", icon: Cpu },
-  { id: "human_sparring", label: "vs Maia", tip: "Play Maia-2, trained to move like a human at your rating", icon: Users },
-  { id: "tricky_bot", label: "vs Trapper", tip: "A bot that picks sound moves most likely to make you blunder", icon: Bomb },
-  { id: "trap_puzzle", label: "Trap puzzles", tip: "Your opponent fell for a classic trap: find the punishing line", icon: Puzzle },
+export const MODES: { id: PlayMode; label: string; name: string; tip: string; icon: typeof Cpu }[] = [
+  { id: "free_lab", label: "Analysis", name: "Analysis", tip: "Move both sides freely with live engine analysis", icon: FlaskConical },
+  { id: "max_engine", label: "Stockfish", name: "vs Stockfish", tip: "Play Stockfish at the strength you choose", icon: Cpu },
+  { id: "human_sparring", label: "Maia", name: "vs Maia", tip: "Play Maia-2, trained to move like a human at your rating", icon: Users },
+  { id: "tricky_bot", label: "Trapper", name: "vs Trapper", tip: "A bot that picks sound moves most likely to make you blunder", icon: Bomb },
+  { id: "trap_puzzle", label: "Puzzles", name: "Trap puzzles", tip: "Your opponent fell for a classic trap: find the punishing line", icon: Puzzle },
 ];
 
 interface PlayToolbarProps {
@@ -30,21 +30,23 @@ export const PlayToolbar: React.FC<PlayToolbarProps> = ({
   onSetRating,
 }) => (
   <div className="play-toolbar">
-    <div className="segmented play-modes" role="group" aria-label="Game mode">
-      {MODES.map(({ id, label, tip, icon: Icon }) => (
+    <div className="mode-grid play-modes" role="group" aria-label="Game mode">
+      {MODES.map(({ id, label, name, tip, icon: Icon }) => (
         <button
           key={id}
-          className={`segmented__btn ${playMode === id ? "is-active" : ""}`}
+          className={`mode-tile ${playMode === id ? "is-active" : ""}`}
           aria-pressed={playMode === id}
+          aria-label={name}
           title={tip}
           onClick={() => onSelectMode(id)}
         >
-          <Icon size={15} aria-hidden="true" />
-          {label}
+          <Icon size={18} aria-hidden="true" />
+          <span>{label}</span>
         </button>
       ))}
     </div>
 
+    {playMode !== "free_lab" && (
     <div className={`play-strength ${ratingLocked ? "is-locked" : ""}`}>
       {playMode === "human_sparring" && (
         <>
@@ -88,8 +90,8 @@ export const PlayToolbar: React.FC<PlayToolbarProps> = ({
         </span>
       )}
 
-      {playMode === "free_lab" && <span className="pill">Free play, no rating</span>}
-      {playMode === "trap_puzzle" && <span className="pill">Find the refutation</span>}
+      {playMode === "trap_puzzle" && <span className="play-strength__label">Find the line that punishes the trap</span>}
     </div>
+    )}
   </div>
 );

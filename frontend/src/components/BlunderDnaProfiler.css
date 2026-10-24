@@ -68,7 +68,7 @@
   border-radius: 50%;
   background:
     radial-gradient(closest-side, var(--surface-solid) 76%, transparent 78% 100%),
-    conic-gradient(var(--dna-accent) var(--pct), rgba(238, 238, 210, 0.12) 0);
+    conic-gradient(var(--dna-accent) var(--pct), rgb(var(--fg-rgb) / 0.12) 0);
   box-shadow: 0 0 28px -10px var(--dna-accent);
 }
 
@@ -81,8 +81,6 @@
   margin-top: 3px;
   font-size: 9px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--text-3);
 }
 
@@ -99,7 +97,7 @@
 }
 
 .dna-identity__name {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.15;
@@ -170,12 +168,12 @@
 
 .radar-web {
   fill: none;
-  stroke: rgba(238, 238, 210, 0.12);
+  stroke: rgb(var(--fg-rgb) / 0.12);
   stroke-width: 1;
 }
 
 .radar-spoke {
-  stroke: rgba(238, 238, 210, 0.1);
+  stroke: rgb(var(--fg-rgb) / 0.1);
 }
 
 .radar-fill {
@@ -386,8 +384,8 @@
   line-height: 1.4;
 }
 
-.trait--good { background: var(--good-soft); color: #b7ecc9; }
-.trait--bad { background: var(--danger-soft); color: #f6c8c1; }
+.trait--good { background: var(--good-soft); color: var(--good-text); }
+.trait--bad { background: var(--danger-soft); color: var(--danger-text); }
 
 .dna-prescription {
   border-top: 1px solid var(--border);

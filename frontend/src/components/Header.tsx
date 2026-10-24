@@ -10,6 +10,8 @@ import {
   Swords,
   GraduationCap,
   Archive,
+  Sun,
+  Moon,
   type LucideIcon,
 } from "lucide-react";
 import type { AppTab, ModelHealth } from "../types/chess";
@@ -25,6 +27,8 @@ interface HeaderProps {
   isFlipped: boolean;
   onFlipBoard: () => void;
   onOpenSettings: () => void;
+  isDark: boolean;
+  onToggleTheme: () => void;
 }
 
 const TABS: { id: AppTab; label: string; icon: LucideIcon }[] = [
@@ -44,6 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   isFlipped,
   onFlipBoard,
   onOpenSettings,
+  isDark,
+  onToggleTheme,
 }) => {
   const isModelActive = modelHealth?.model_loaded ?? false;
   const navRef = useRef<HTMLElement>(null);
@@ -113,6 +119,19 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="live-dot" />
           <span className="engine-status__text">{isModelActive ? "Engine online" : "Connecting"}</span>
         </span>
+        <button
+          className="btn btn--ghost btn--icon theme-toggle"
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          title={isDark ? "Light mode" : "Dark mode"}
+          onClick={() => {
+            playSound("click");
+            onToggleTheme();
+          }}
+        >
+          <span key={isDark ? "moon" : "sun"} className="theme-toggle__icon">
+            {isDark ? <Sun size={17} /> : <Moon size={17} />}
+          </span>
+        </button>
         <button
           className="btn btn--ghost btn--icon"
           aria-label="Flip board"

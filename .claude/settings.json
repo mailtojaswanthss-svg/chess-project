@@ -1,0 +1,17 @@
+{
+  "enabledMcpjsonServers": ["playwright", "context7"],
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest:*)",
+      "Bash(pytest:*)",
+      "Bash(python -m evals.run_evals)",
+      "Bash(npm run build)",
+      "Bash(npx tsc -b)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
+    ]
+  }
+}

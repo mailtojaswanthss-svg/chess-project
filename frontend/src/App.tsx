@@ -38,9 +38,11 @@ import { OutlookCard } from "./components/arena/OutlookCard";
 import { CoachCard } from "./components/arena/CoachCard";
 import { ThreatRadarCard } from "./components/arena/ThreatRadarCard";
 import { ReviewWorkspace } from "./components/review/ReviewWorkspace";
+import { HomeView } from "./components/home/HomeView";
 import { PuzzleCard, type PuzzleStatus } from "./components/arena/PuzzleCard";
 import { useTrapPuzzles, puzzleStartPosition, puzzleSolveLength, puzzleSolverColor } from "./utils/useTrapPuzzles";
 import { useAppearance } from "./utils/useAppearance";
+import { useScrollReveal } from "./utils/useScrollReveal";
 import {
   gameOutcome,
   getKingSquare,
@@ -55,6 +57,8 @@ import { playSound, setSoundEnabled } from "./utils/audio";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const SAVED_GAMES_KEY = "chesswise.completed-games";
+// Set once the Home intro has been seen; later visits open straight on Play
+const SEEN_HOME_KEY = "chesswise.seen-home";
 const STARTING_FEN = new Chess().fen();
 const NO_THREATS: ThreatItem[] = [];
 
@@ -66,7 +70,13 @@ export default function App() {
   const [playMode, setPlayMode] = useState<PlayMode>("free_lab");
   const playModeRef = useRef<PlayMode>("free_lab");
   playModeRef.current = playMode;
-  const [activeTab, setActiveTab] = useState<AppTab>("arena");
+  const [activeTab, setActiveTab] = useState<AppTab>(() => {
+    try {
+      return localStorage.getItem(SEEN_HOME_KEY) ? "arena" : "home";
+    } catch {
+      return "arena";
+    }
+  });
   const [isReviewingGame, setIsReviewingGame] = useState<boolean>(false);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
   const [soundActive, setSoundActive] = useState<boolean>(true);
@@ -229,6 +239,28 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(SAVED_GAMES_KEY, JSON.stringify(savedGames));
   }, [savedGames]);
+
+  // Once the Home intro has been shown, later visits open straight on Play
+  useEffect(() => {
+    if (activeTab !== "home") return;
+    try {
+      localStorage.setItem(SEEN_HOME_KEY, "1");
+    } catch {
+      // Storage can be unavailable (private mode); the intro just shows again next time
+    }
+  }, [activeTab]);
+
+  // A new tab starts at the top of the page
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [activeTab]);
+
+  // Hold every looping animation still while the tab is hidden
+  useEffect(() => {
+    const sync = () => document.body.classList.toggle("paused", document.hidden);
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
 
   // Fetch backend health & model metrics
   const checkHealth = useCallback(() => {
@@ -1235,9 +1267,16 @@ export default function App() {
   const opponentAvatar =
     playMode === "max_engine" ? "⚡" : playMode === "tricky_bot" ? "🪤" : playMode === "human_sparring" ? "🧠" : "🧪";
   const viewKey = activeTab === "arena" && isReviewingGame ? "review" : activeTab;
+  useScrollReveal(viewKey);
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      <div className="ambient" aria-hidden="true">
+        <span className="ambient__grain" />
+      </div>
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -1279,8 +1318,20 @@ export default function App() {
         />
       )}
 
-      <main className="main-content">
+      <main id="main" tabIndex={-1} className="main-content">
         <div key={viewKey} className="view-enter">
+          {activeTab === "home" && (
+            <HomeView
+              onStart={(mode) => {
+                if (mode) handleSelectMode(mode);
+                setActiveTab("arena");
+              }}
+              onOpenTraps={() => {
+                handleSelectMode("trap_puzzle");
+                setActiveTab("arena");
+              }}
+            />
+          )}
           {activeTab === "arena" && !isReviewingGame && (
             <div className="view arena-page">
               <ArenaView

@@ -97,6 +97,95 @@
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Cards that start below the fold rise in as they scroll into view
+   (armed and retired by utils/useScrollReveal.ts) */
+.rv {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.rv.rv-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 620ms var(--ease-out),
+    transform 720ms var(--ease-out);
+}
+
+/* Page titles: a short accent stroke draws itself under the heading */
+.page-title::after {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 3px;
+  margin-top: 10px;
+  border-radius: 3px;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: draw-x 900ms var(--ease-out) 120ms backwards;
+}
+
+@keyframes draw-x {
+  from { opacity: 0; transform: scaleX(0); }
+}
+
+/* One environment behind every page: two soft glows drifting on long cycles */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ambient::before,
+.ambient::after {
+  content: "";
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.ambient::before {
+  top: -30vmax;
+  left: -20vmax;
+  background: radial-gradient(circle closest-side, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--accent) 5%, transparent) 55%, transparent);
+  animation: ambient-a 84s ease-in-out -21s infinite alternate;
+}
+
+.ambient::after {
+  right: -25vmax;
+  bottom: -35vmax;
+  background: radial-gradient(circle closest-side, color-mix(in srgb, var(--board-dark) 12%, transparent), color-mix(in srgb, var(--board-dark) 4%, transparent) 55%, transparent);
+  animation: ambient-b 112s ease-in-out -40s infinite alternate;
+}
+
+/* A whisper of grain over the glows, so their soft gradients never show steps */
+.ambient__grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.4 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes ambient-a {
+  to { transform: translate(18vmax, 14vmax) scale(1.12); }
+}
+
+@keyframes ambient-b {
+  to { transform: translate(-16vmax, -12vmax) scale(0.92); }
+}
+
+/* Hidden tab: every loop holds still (animation-play-state is not inherited) */
+body.paused *,
+body.paused *::before,
+body.paused *::after {
+  animation-play-state: paused !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -104,6 +193,11 @@
     animation-name: none !important;
     animation-duration: 0s !important;
     transition-duration: 0s !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
+  }
+  .rv {
+    opacity: 1;
+    transform: none;
   }
 }

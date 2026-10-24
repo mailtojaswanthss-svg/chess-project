@@ -59,6 +59,9 @@ const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const SAVED_GAMES_KEY = "chesswise.completed-games";
 // Set once the Home intro has been seen; later visits open straight on Play
 const SEEN_HOME_KEY = "chesswise.seen-home";
+// Shown when this copy runs without the engine server (for example a shared link)
+const ENGINE_OFFLINE_NOTE =
+  "The chess engine isn't connected here, so the bots and the coach are off. Free play, puzzles and lessons still work.";
 const STARTING_FEN = new Chess().fen();
 const NO_THREATS: ThreatItem[] = [];
 
@@ -159,6 +162,9 @@ export default function App() {
   const [selectedReviewPly, setSelectedReviewPly] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [modelHealth, setModelHealth] = useState<ModelHealth | null>(null);
+  // True once the health check fails: skip analysis calls instead of erroring on every move
+  const [backendOffline, setBackendOffline] = useState(false);
+  const backendOfflineRef = useRef(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // Dedicated Review Game Instance (preserves active live match state)
@@ -268,10 +274,14 @@ export default function App() {
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Health check failed"))))
       .then((data: ModelHealth) => {
         setModelHealth(data);
+        backendOfflineRef.current = false;
+        setBackendOffline(false);
         setError(null);
       })
       .catch(() => {
         setModelHealth(null);
+        backendOfflineRef.current = true;
+        setBackendOffline(true);
       });
   }, []);
 
@@ -297,6 +307,13 @@ export default function App() {
   const analyzePosition = useCallback(
     async (position: Chess) => {
       const reqId = ++analysisRequestIdRef.current;
+      if (backendOfflineRef.current) {
+        // No engine server: the panels show their "Needs Stockfish" states instead
+        setTacticalAnalysis(null);
+        setAnalysis(null);
+        setIsAnalyzing(false);
+        return;
+      }
       setIsAnalyzing(true);
       setError(null);
       try {
@@ -525,7 +542,13 @@ export default function App() {
         }
       } catch (err) {
         if (reqId === moveRequestIdRef.current) {
-          setError(err instanceof Error ? err.message : "Engine calculation failed.");
+          setError(
+            backendOfflineRef.current
+              ? ENGINE_OFFLINE_NOTE
+              : err instanceof Error
+                ? err.message
+                : "Engine calculation failed.",
+          );
         }
       } finally {
         if (reqId === moveRequestIdRef.current) {
@@ -576,7 +599,7 @@ export default function App() {
       setHintArrow([[from, to, "rgba(255, 205, 86, 0.95)"]]);
       showToast(`Coach Hint: ${botMove.san}`);
     } catch {
-      showToast("Hint unavailable for this position");
+      showToast(backendOfflineRef.current ? "Hints need the engine, which isn't connected here" : "Hint unavailable for this position");
     } finally {
       setIsFetchingHint(false);
     }
@@ -602,7 +625,7 @@ export default function App() {
       playSound("click");
       showToast(`GM Coach: ${data.concept}`);
     } catch {
-      showToast("Coach advice unavailable");
+      showToast(backendOfflineRef.current ? "The coach needs the engine, which isn't connected here" : "Coach advice unavailable");
     } finally {
       setIsFetchingCoachAdvice(false);
     }
@@ -1261,8 +1284,8 @@ export default function App() {
   };
 
   const riskScore = analysis?.blunder_probability ?? tacticalAnalysis?.overall_blunder_probability ?? null;
-  const riskUnavailable = tacticalAnalysis?.risk_source === "unavailable" && riskScore === null;
-  const evalUnavailable = tacticalAnalysis?.eval_source === "unavailable";
+  const riskUnavailable = (backendOffline || tacticalAnalysis?.risk_source === "unavailable") && riskScore === null;
+  const evalUnavailable = backendOffline || tacticalAnalysis?.eval_source === "unavailable";
   const isLive = !completedGameSummary;
   const opponentAvatar =
     playMode === "max_engine" ? "⚡" : playMode === "tricky_bot" ? "🪤" : playMode === "human_sparring" ? "🧠" : "🧪";
@@ -1281,6 +1304,7 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         modelHealth={modelHealth}
+        backendOffline={backendOffline}
         soundEnabled={soundActive}
         onToggleSound={handleToggleSound}
         isFlipped={isFlipped}

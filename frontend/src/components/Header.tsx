@@ -23,6 +23,8 @@ interface HeaderProps {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
   modelHealth: ModelHealth | null;
+  /** The health check failed: this copy runs without the engine server */
+  backendOffline?: boolean;
   soundEnabled: boolean;
   onToggleSound: () => void;
   isFlipped: boolean;
@@ -45,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onTabChange,
   modelHealth,
+  backendOffline = false,
   soundEnabled,
   onToggleSound,
   isFlipped,
@@ -59,9 +62,11 @@ export const Header: React.FC<HeaderProps> = ({
     !(modelHealth?.model_loaded ?? false) && "the blunder model",
   ].filter(Boolean) as string[];
   const fullyOnline = backendUp && missing.length === 0;
-  const statusText = !backendUp ? "Connecting" : fullyOnline ? "Engine online" : "Limited";
+  const statusText = !backendUp ? (backendOffline ? "Engine offline" : "Connecting") : fullyOnline ? "Engine online" : "Limited";
   const statusTitle = !backendUp
-    ? "Backend offline or still connecting"
+    ? backendOffline
+      ? "This copy runs without the engine server, so analysis, the bots and the coach are off. Free play, puzzles and lessons still work."
+      : "Connecting to the engine server"
     : fullyOnline
       ? `Backend connected · Stockfish ready · model trained on ${modelHealth?.model_train_samples?.toLocaleString() ?? 0} samples`
       : `Backend connected, but ${missing.join(" and ")} ${missing.length > 1 ? "aren't" : "isn't"} available, so some numbers show "—"`;

@@ -1,0 +1,22 @@
+# The ChessWise engine server as a Vercel project (`chesswise-api`, Root Directory
+# `deploy/api`). Local development still uses the repo-root pyproject.toml.
+[project]
+name = "chesswise-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
+  "joblib>=1.4,<2",
+  "numpy>=2,<3",
+  "pydantic-settings>=2.6,<3",
+  "python-chess>=1.999,<2",
+  # Pinned to the version that pickled blunder_model.joblib
+  "scikit-learn==1.9.1",
+]
+
+[tool.vercel]
+entrypoint = "main:app"
+
+[tool.vercel.scripts]
+build = "python build.py"

@@ -19,7 +19,7 @@ ChessWise is a chess trainer that predicts **when you're likely to blunder**, ex
 
 ![ChessWise play screen in light mode](./docs/screenshots/play-light.png)
 
-<sub>The live link has no engine server of its own, so analysis, the bots and the coach start offline there. To use your own: run `start-chesswise.bat` (or the backend with Stockfish), click **Engine offline** at the top of the live page and connect `http://localhost:8000`. Only your browser reaches your computer, so friends need their own engine.</sub>
+<sub>The live link runs the full app: its engine server (Stockfish 17.1 plus a small demo blunder model) is hosted on Vercel at [chesswise-ai-api.vercel.app](https://chesswise-ai-api.vercel.app/health), from `deploy/api/`. Maia bots need the local install. To use your own engine instead, click the engine pill at the top and connect `http://localhost:8000`.</sub>
 
 📑 Project report: [`docs/CHESSWISE_PROJECT_REPORT.docx`](./docs/CHESSWISE_PROJECT_REPORT.docx)
 
